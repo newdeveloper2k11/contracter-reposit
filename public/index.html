@@ -14,7 +14,7 @@
         <div class="brand">
           <p class="eyebrow">Secure contract cloud</p>
           <h1>Contract Vault</h1>
-          <p class="subtle">Word-like drafting, uploads, Drive import, autosave, and encrypted records.</p>
+          <p class="subtle">Pick a document card, then edit it in Word mode or PDF page mode.</p>
         </div>
 
         <div class="sidebar-actions">
@@ -24,7 +24,7 @@
         </div>
 
         <label class="search">
-          <span>Find files</span>
+          <span>Find documents</span>
           <input id="searchInput" type="search" placeholder="Search by contract name or category" />
         </label>
 
@@ -34,7 +34,7 @@
       <main class="workspace">
         <header class="workspace-topbar">
           <div class="title-column">
-            <p class="eyebrow">Document</p>
+            <p class="eyebrow">Document editor</p>
             <input id="titleInput" class="title-input" type="text" value="" placeholder="Contract title" />
             <div class="inline-meta">
               <label>
@@ -46,10 +46,25 @@
           </div>
 
           <div class="topbar-actions">
+            <div class="mode-switch" aria-label="Editing mode">
+              <button id="wordModeBtn" class="mode-btn active" type="button">Word</button>
+              <button id="pdfModeBtn" class="mode-btn" type="button">PDF</button>
+            </div>
             <button id="downloadHtmlBtn" class="secondary-btn" disabled>Download HTML</button>
             <button id="deleteBtn" class="danger-btn" disabled>Delete</button>
           </div>
         </header>
+
+        <section class="gallery-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Documents</p>
+              <h2>Choose a contract card</h2>
+            </div>
+            <span id="galleryCount" class="panel-tag">0 cards</span>
+          </div>
+          <div id="documentGallery" class="document-gallery"></div>
+        </section>
 
         <section class="toolbar">
           <button data-command="undo">Undo</button>
@@ -75,7 +90,8 @@
 
         <section class="document-grid">
           <section class="editor-card">
-            <div class="paper-frame">
+            <div id="editorShell" class="paper-frame word-mode">
+              <div id="editorModeBadge" class="editor-mode-badge">Word mode</div>
               <div id="editor" class="editor" contenteditable="true"></div>
             </div>
           </section>
@@ -105,9 +121,9 @@
 
         <section class="details-grid">
           <article class="info-card">
-            <p class="eyebrow">Storage</p>
-            <h2>Database-first, cloud-ready</h2>
-            <p>Your contracts and uploaded files are encrypted before being stored. Deploy this app to a cloud host and the database becomes online storage instead of device-only storage.</p>
+            <p class="eyebrow">Edit modes</p>
+            <h2>Word or PDF feel</h2>
+            <p>Use Word mode for flowing text edits, or switch to PDF mode for a tighter page-like drafting surface that feels more fixed and document-oriented.</p>
           </article>
           <article class="info-card">
             <p class="eyebrow">Drive</p>

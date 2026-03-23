@@ -6,6 +6,7 @@ const state = {
   saveTimer: null,
   isLoading: false,
   settings: null,
+  editorMode: "word",
   google: {
     tokenClient: null,
     accessToken: null,
@@ -15,15 +16,21 @@ const state = {
 
 const elements = {
   contractList: document.querySelector("#contractList"),
+  documentGallery: document.querySelector("#documentGallery"),
+  galleryCount: document.querySelector("#galleryCount"),
   searchInput: document.querySelector("#searchInput"),
   newContractBtn: document.querySelector("#newContractBtn"),
   duplicateBtn: document.querySelector("#duplicateBtn"),
   settingsBtn: document.querySelector("#settingsBtn"),
   deleteBtn: document.querySelector("#deleteBtn"),
   downloadHtmlBtn: document.querySelector("#downloadHtmlBtn"),
+  wordModeBtn: document.querySelector("#wordModeBtn"),
+  pdfModeBtn: document.querySelector("#pdfModeBtn"),
   titleInput: document.querySelector("#titleInput"),
   categoryInput: document.querySelector("#categoryInput"),
   editor: document.querySelector("#editor"),
+  editorShell: document.querySelector("#editorShell"),
+  editorModeBadge: document.querySelector("#editorModeBadge"),
   saveStatus: document.querySelector("#saveStatus"),
   fileInput: document.querySelector("#fileInput"),
   insertTextFileBtn: document.querySelector("#insertTextFileBtn"),
@@ -55,12 +62,17 @@ document.querySelectorAll(".toolbar button[data-action]").forEach(button => {
   });
 });
 
-elements.searchInput.addEventListener("input", renderContractList);
+elements.searchInput.addEventListener("input", () => {
+  renderContractList();
+  renderDocumentGallery();
+});
 elements.newContractBtn.addEventListener("click", createContract);
 elements.duplicateBtn.addEventListener("click", duplicateContract);
 elements.settingsBtn.addEventListener("click", openSettings);
 elements.deleteBtn.addEventListener("click", deleteContract);
 elements.downloadHtmlBtn.addEventListener("click", downloadHtml);
+elements.wordModeBtn.addEventListener("click", () => setEditorMode("word"));
+elements.pdfModeBtn.addEventListener("click", () => setEditorMode("pdf"));
 elements.titleInput.addEventListener("input", scheduleSave);
 elements.categoryInput.addEventListener("input", scheduleSave);
 elements.editor.addEventListener("input", scheduleSave);
@@ -74,6 +86,7 @@ boot();
 async function boot() {
   await loadSettings();
   initializeGoogleClients();
+  setEditorMode("word");
   await loadContracts();
 }
 
@@ -91,6 +104,7 @@ async function loadContracts() {
   const data = await response.json();
   state.contracts = data.contracts;
   renderContractList();
+  renderDocumentGallery();
 
   if (state.contracts[0]) {
     await selectContract(state.contracts[0].id);
@@ -102,6 +116,7 @@ async function loadContracts() {
 async function selectContract(id) {
   state.activeId = id;
   renderContractList();
+  renderDocumentGallery();
   lockEditor(true);
   setStatus("Loading contract...");
 
@@ -120,13 +135,16 @@ async function selectContract(id) {
   setStatus(`Saved ${formatDate(data.contract.updatedAt)}`);
 }
 
-function renderContractList() {
+function filteredContracts() {
   const query = elements.searchInput.value.trim().toLowerCase();
-  const filtered = state.contracts.filter(contract => {
+  return state.contracts.filter(contract => {
     const haystack = `${contract.title} ${contract.category}`.toLowerCase();
     return haystack.includes(query);
   });
+}
 
+function renderContractList() {
+  const filtered = filteredContracts();
   elements.contractList.innerHTML = "";
 
   for (const contract of filtered) {
@@ -152,6 +170,42 @@ function renderContractList() {
     empty.className = "subtle";
     empty.textContent = "No contracts match your search.";
     elements.contractList.appendChild(empty);
+  }
+}
+
+function renderDocumentGallery() {
+  const filtered = filteredContracts();
+  elements.galleryCount.textContent = `${filtered.length} card${filtered.length === 1 ? "" : "s"}`;
+  elements.documentGallery.innerHTML = "";
+
+  for (const contract of filtered) {
+    const button = document.createElement("button");
+    button.className = `gallery-card ${contract.id === state.activeId ? "active" : ""}`;
+    button.innerHTML = `
+      <div class="gallery-paper">
+        <div class="gallery-paper-top"></div>
+        <h3>${escapeHtml(contract.title)}</h3>
+        <p>${escapeHtml(contract.category)}</p>
+        <div class="gallery-lines">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <div class="gallery-card-meta">
+        <span>${contract.sourceContractId ? "Generated from template" : "Base contract"}</span>
+        <span>${formatDate(contract.updatedAt)}</span>
+      </div>
+    `;
+    button.addEventListener("click", () => selectContract(contract.id));
+    elements.documentGallery.appendChild(button);
+  }
+
+  if (!filtered.length) {
+    const empty = document.createElement("article");
+    empty.className = "gallery-empty";
+    empty.textContent = "No document cards found for this search.";
+    elements.documentGallery.appendChild(empty);
   }
 }
 
@@ -223,6 +277,8 @@ async function createContract() {
   });
   const data = await response.json();
   state.contracts.unshift(toListItem(data.contract, data.files));
+  renderContractList();
+  renderDocumentGallery();
   await selectContract(data.contract.id);
 }
 
@@ -237,6 +293,8 @@ async function duplicateContract() {
   });
   const data = await response.json();
   state.contracts.unshift(toListItem(data.contract, data.files));
+  renderContractList();
+  renderDocumentGallery();
   await selectContract(data.contract.id);
 }
 
@@ -263,6 +321,7 @@ async function deleteContract() {
   elements.deleteBtn.disabled = true;
   elements.downloadHtmlBtn.disabled = true;
   renderContractList();
+  renderDocumentGallery();
   renderFileList();
 
   if (state.contracts[0]) {
@@ -308,6 +367,7 @@ async function saveActiveContract() {
   }
 
   renderContractList();
+  renderDocumentGallery();
   setStatus(`Saved ${formatDate(data.contract.updatedAt)}`);
 }
 
@@ -434,6 +494,17 @@ function runEditorAction(action) {
       `<p>Signature: ____________________________</p><p>Name: _________________________________</p>`
     );
   }
+}
+
+function setEditorMode(mode) {
+  state.editorMode = mode;
+  const isWord = mode === "word";
+  elements.wordModeBtn.classList.toggle("active", isWord);
+  elements.pdfModeBtn.classList.toggle("active", !isWord);
+  elements.editorShell.classList.toggle("word-mode", isWord);
+  elements.editorShell.classList.toggle("pdf-mode", !isWord);
+  elements.editor.classList.toggle("pdf-editor", !isWord);
+  elements.editorModeBadge.textContent = isWord ? "Word mode" : "PDF mode";
 }
 
 function openSettings() {
@@ -663,6 +734,7 @@ function syncFileCountOnList() {
     item.fileCount = state.activeFiles.length;
   }
   renderContractList();
+  renderDocumentGallery();
 }
 
 function lockEditor(disabled) {

@@ -2,7 +2,6 @@
   --bg: #e8dfd2;
   --panel: rgba(255, 251, 246, 0.9);
   --panel-strong: #fffdfa;
-  --panel-deep: #123433;
   --accent: #0f5f57;
   --accent-soft: #dce9e3;
   --accent-warm: #bf5e2f;
@@ -54,7 +53,8 @@ select {
 .brand h1,
 .assets-header h2,
 .settings-header h2,
-.info-card h2 {
+.info-card h2,
+.section-heading h2 {
   margin: 0;
 }
 
@@ -77,7 +77,9 @@ select {
 .inline-meta,
 .topbar-actions,
 .details-grid,
-.toolbar {
+.toolbar,
+.file-item-actions,
+.mode-switch {
   display: flex;
   gap: 10px;
 }
@@ -91,12 +93,23 @@ select {
 .secondary-btn,
 .danger-btn,
 .upload-btn,
-.toolbar button {
+.toolbar button,
+.mode-btn,
+.gallery-card,
+.contract-item {
   border: none;
+  cursor: pointer;
+  transition: transform 140ms ease, opacity 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.primary-btn,
+.secondary-btn,
+.danger-btn,
+.upload-btn,
+.toolbar button,
+.mode-btn {
   border-radius: 999px;
   padding: 11px 15px;
-  cursor: pointer;
-  transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
 }
 
 .primary-btn {
@@ -116,8 +129,28 @@ select {
   color: var(--danger);
 }
 
+.mode-switch {
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(15, 95, 87, 0.08);
+}
+
+.mode-btn {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.mode-btn.active {
+  background: white;
+  color: var(--accent);
+  box-shadow: 0 4px 16px rgba(20, 24, 28, 0.08);
+}
+
 button:hover:not(:disabled),
-.upload-btn:hover {
+.upload-btn:hover,
+.gallery-card:hover,
+.contract-item:hover {
   transform: translateY(-1px);
 }
 
@@ -179,12 +212,15 @@ button:disabled {
 .contract-item h3,
 .contract-item p,
 .file-item h3,
-.file-item p {
+.file-item p,
+.gallery-card h3,
+.gallery-card p {
   margin: 0;
 }
 
 .contract-meta,
-.file-meta {
+.file-meta,
+.gallery-card-meta {
   display: flex;
   justify-content: space-between;
   margin-top: 8px;
@@ -199,6 +235,7 @@ button:disabled {
 }
 
 .workspace-topbar,
+.gallery-panel,
 .editor-card,
 .assets-panel,
 .info-card,
@@ -208,9 +245,13 @@ button:disabled {
   box-shadow: var(--shadow);
 }
 
-.workspace-topbar {
+.workspace-topbar,
+.gallery-panel {
   border-radius: var(--radius);
   padding: 20px 22px;
+}
+
+.workspace-topbar {
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -243,9 +284,91 @@ button:disabled {
 
 .save-status,
 .drive-status,
-.panel-tag {
+.panel-tag,
+.gallery-card-meta {
   font-size: 0.92rem;
   color: var(--muted);
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.document-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.gallery-card,
+.gallery-empty {
+  border-radius: 24px;
+}
+
+.gallery-card {
+  background: rgba(255, 255, 255, 0.64);
+  border: 1px solid rgba(18, 52, 51, 0.08);
+  padding: 14px;
+  text-align: left;
+}
+
+.gallery-card.active {
+  background: linear-gradient(180deg, rgba(15, 95, 87, 0.18), rgba(255, 255, 255, 0.94));
+  border-color: rgba(15, 95, 87, 0.28);
+}
+
+.gallery-paper {
+  min-height: 210px;
+  padding: 18px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(15, 95, 87, 0.03), transparent 12%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(18, 52, 51, 0.06) 0,
+      rgba(18, 52, 51, 0.06) 1px,
+      transparent 1px,
+      transparent 28px
+    ),
+    white;
+  box-shadow: 0 12px 24px rgba(20, 24, 28, 0.08);
+}
+
+.gallery-paper-top {
+  width: 54px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(191, 94, 47, 0.32);
+  margin-bottom: 14px;
+}
+
+.gallery-paper p {
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.gallery-lines {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.gallery-lines span {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(18, 52, 51, 0.08);
+}
+
+.gallery-empty {
+  border: 1px dashed rgba(18, 52, 51, 0.18);
+  padding: 28px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .toolbar {
@@ -266,8 +389,13 @@ button:disabled {
 
 .paper-frame {
   min-height: 68vh;
-  padding: 32px;
+  position: relative;
+  padding: 54px 32px 32px;
   border-radius: 24px;
+  border: 1px solid var(--line);
+}
+
+.word-mode {
   background:
     linear-gradient(180deg, rgba(15, 95, 87, 0.03), transparent 12%),
     repeating-linear-gradient(
@@ -278,7 +406,24 @@ button:disabled {
       transparent 34px
     ),
     var(--panel-strong);
-  border: 1px solid var(--line);
+}
+
+.pdf-mode {
+  background:
+    linear-gradient(180deg, rgba(28, 34, 41, 0.08), rgba(28, 34, 41, 0)),
+    #d8d4cd;
+}
+
+.editor-mode-badge {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .editor {
@@ -292,6 +437,14 @@ button:disabled {
   outline: none;
   line-height: 1.75;
   font-size: 1.04rem;
+}
+
+.pdf-editor {
+  max-width: 794px;
+  min-height: 1122px;
+  padding: 64px 56px;
+  border: 1px solid rgba(28, 34, 41, 0.18);
+  box-shadow: 0 24px 44px rgba(18, 22, 26, 0.18);
 }
 
 .editor h1,
@@ -333,12 +486,6 @@ button:disabled {
 
 .file-item {
   background: rgba(255, 255, 255, 0.7);
-}
-
-.file-item-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
 }
 
 .details-grid {
@@ -389,7 +536,8 @@ button:disabled {
 
   .workspace-topbar,
   .details-grid,
-  .topbar-actions {
+  .topbar-actions,
+  .section-heading {
     flex-direction: column;
     grid-template-columns: 1fr;
   }
