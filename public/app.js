@@ -139,8 +139,9 @@ window.onpopstate = () => loadFromRoute();
 boot();
 
 async function boot() {
-  await initEditor();
   await loadSettings();
+  await loadTinyMce();
+  await initEditor();
   initGoogle();
   setEditorMode("word");
   setWritingMode("editing");
@@ -191,6 +192,32 @@ async function loadSettings() {
   el.googleDriveProjectNumber.value = state.settings.googleDriveProjectNumber || "";
   el.storageMode.value = state.settings.storageMode || "database";
   updateDriveStatus("Drive not connected.");
+}
+
+function loadTinyMce() {
+  return new Promise((resolve, reject) => {
+    if (window.tinymce) {
+      resolve();
+      return;
+    }
+
+    const existing = document.querySelector('script[data-tinymce-loader="true"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("TinyMCE failed to load.")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    const apiKey = state.settings?.tinyMceKey || "no-api-key";
+    script.src = `https://cdn.tiny.cloud/1/${encodeURIComponent(apiKey)}/tinymce/8/tinymce.min.js`;
+    script.referrerPolicy = "origin";
+    script.crossOrigin = "anonymous";
+    script.dataset.tinymceLoader = "true";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("TinyMCE failed to load."));
+    document.head.appendChild(script);
+  });
 }
 
 async function loadContracts() {

@@ -342,7 +342,8 @@ async function handleApi(req, res, url) {
         googleDriveClientId: getSetting("googleDriveClientId", ""),
         googleDriveApiKey: getSetting("googleDriveApiKey", ""),
         googleDriveProjectNumber: getSetting("googleDriveProjectNumber", ""),
-        storageMode: getSetting("storageMode", "database")
+        storageMode: getSetting("storageMode", "database"),
+        tinyMceKey: getSetting("tinyMceKey", "")
       }
     });
     return;
@@ -362,7 +363,8 @@ async function handleApi(req, res, url) {
         googleDriveClientId: getSetting("googleDriveClientId", ""),
         googleDriveApiKey: getSetting("googleDriveApiKey", ""),
         googleDriveProjectNumber: getSetting("googleDriveProjectNumber", ""),
-        storageMode: getSetting("storageMode", "database")
+        storageMode: getSetting("storageMode", "database"),
+        tinyMceKey: getSetting("tinyMceKey", "")
       }
     });
     return;
@@ -783,7 +785,8 @@ function getSetting(key, fallback) {
     googleDriveClientId: process.env.GOOGLE_DRIVE_CLIENT_ID,
     googleDriveApiKey: process.env.GOOGLE_DRIVE_API_KEY,
     googleDriveProjectNumber: process.env.GOOGLE_DRIVE_PROJECT_NUMBER,
-    storageMode: process.env.STORAGE_MODE
+    storageMode: process.env.STORAGE_MODE,
+    tinyMceKey: process.env.TinyMCE_KEY || process.env.TINYMCE_KEY
   };
   if (envMap[key]) {
     return envMap[key];
