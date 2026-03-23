@@ -360,12 +360,18 @@ select {
 
 .docs-layout {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-columns: 250px minmax(0, 1fr) 280px;
   gap: 18px;
   padding: 0 18px 18px;
 }
 
 .docs-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.docs-rightbar {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -380,6 +386,12 @@ select {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
+}
+
+.mini-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+  align-self: center;
 }
 
 .docs-shell {
@@ -432,6 +444,12 @@ select {
   border-color: transparent;
 }
 
+.suggesting-editor {
+  background:
+    linear-gradient(180deg, rgba(255, 240, 181, 0.35), rgba(255, 240, 181, 0.35)),
+    white;
+}
+
 .editor table {
   width: 100%;
   border-collapse: collapse;
@@ -458,10 +476,62 @@ select {
 }
 
 .docs-tabs-list,
-.file-list {
+.file-list,
+.comments-list,
+.outline-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.outline-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  text-align: left;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.comment-item {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  padding: 12px;
+}
+
+.comment-item p,
+.comment-item small {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.empty-note {
+  color: var(--muted);
+  margin: 0;
+}
+
+.pdf-review-pane {
+  margin: 20px auto 0;
+  max-width: 850px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  padding: 14px;
+}
+
+.pdf-review-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.pdf-frame {
+  width: 100%;
+  height: 640px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
 .page-card {

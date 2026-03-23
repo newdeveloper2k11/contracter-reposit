@@ -26,6 +26,7 @@
               <p class="helper-copy">Open a file, create a blank draft, or duplicate a saved contract without dealing with setup every time.</p>
               <div class="quick-grid">
                 <button id="newContractBtn" class="primary-action" type="button">Blank document</button>
+                <button id="newGoogleDocBtn" class="quick-action" type="button">New Google Doc</button>
                 <button id="homeDriveBtn" class="quick-action" type="button">Open from Google Drive</button>
                 <label class="quick-action file-label">
                   Upload from computer
@@ -62,7 +63,7 @@
       <section id="editorView" class="view editor-view hidden">
         <header class="docs-topbar">
           <div class="docs-top-left">
-            <button id="backBtn" class="docs-icon-btn" type="button" aria-label="Back">←</button>
+            <button id="backBtn" class="docs-icon-btn" type="button" aria-label="Back">Back</button>
             <div class="docs-mark">Docs</div>
             <div class="docs-title-stack">
               <input id="titleInput" class="docs-title-input" type="text" placeholder="Untitled document" />
@@ -90,6 +91,8 @@
           <div class="docs-toolbar-row">
             <button id="wordModeBtn" class="toolbar-pill active" type="button">Pages</button>
             <button id="pdfModeBtn" class="toolbar-pill" type="button">Pageless</button>
+            <button id="editingModeBtn" class="toolbar-pill active" type="button">Editing</button>
+            <button id="suggestingModeBtn" class="toolbar-pill" type="button">Suggesting</button>
             <span class="toolbar-divider"></span>
             <label class="mini-field">
               <span>Category</span>
@@ -97,6 +100,7 @@
             </label>
             <button id="insertTextFileBtn" class="toolbar-pill" type="button" disabled>Insert file</button>
             <button id="duplicateBtn" class="toolbar-pill" type="button" disabled>Duplicate doc</button>
+            <button id="openGoogleDocBtn" class="toolbar-pill" type="button">Open in Google Docs</button>
           </div>
 
           <div class="docs-toolbar-row tools-row">
@@ -119,11 +123,22 @@
             <button data-action="smartchip">Smart chip</button>
             <button data-action="dropdownchip">Dropdown</button>
             <button data-action="meetingnotes">Meeting notes</button>
+            <button id="addCommentBtn" type="button">Comment</button>
           </div>
         </section>
 
         <main class="docs-layout">
           <aside class="docs-sidebar">
+            <div class="sidebar-card">
+              <div class="section-row">
+                <div>
+                  <p class="eyebrow">Outline</p>
+                  <h2>Document outline</h2>
+                </div>
+              </div>
+              <div id="outlineList" class="outline-list"></div>
+            </div>
+
             <div class="sidebar-card">
               <div class="section-row">
                 <div>
@@ -154,16 +169,37 @@
             <div class="doc-tabs-bar">
               <div id="pageIndicator" class="pill-tag">Page 1 of 1</div>
               <div class="tab-nav">
-                <button id="prevPageBtn" class="docs-icon-btn" type="button">←</button>
-                <button id="nextPageBtn" class="docs-icon-btn" type="button">→</button>
+                <span id="wordCount" class="mini-status">0 words</span>
+                <button id="prevPageBtn" class="docs-icon-btn" type="button">Prev</button>
+                <button id="nextPageBtn" class="docs-icon-btn" type="button">Next</button>
               </div>
             </div>
 
             <div id="editorShell" class="paper-frame word-mode docs-shell">
               <div id="editorModeBadge" class="editor-mode-badge">Pages mode</div>
               <div id="editor" class="editor docs-editor" contenteditable="true"></div>
+              <div id="pdfReviewPane" class="pdf-review-pane hidden">
+                <div class="pdf-review-header">
+                  <strong>PDF review mode</strong>
+                  <span id="pdfReviewLabel" class="mini-status">No PDF selected</span>
+                </div>
+                <iframe id="pdfFrame" class="pdf-frame" title="PDF review"></iframe>
+              </div>
             </div>
           </section>
+
+          <aside class="docs-rightbar">
+            <div class="sidebar-card">
+              <div class="section-row">
+                <div>
+                  <p class="eyebrow">Comments</p>
+                  <h2>Page comments</h2>
+                </div>
+                <span id="commentCount" class="pill-tag">0</span>
+              </div>
+              <div id="commentsList" class="comments-list"></div>
+            </div>
+          </aside>
         </main>
       </section>
     </div>
