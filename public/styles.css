@@ -273,6 +273,15 @@ textarea {
   padding: 10px 14px;
 }
 
+.primary-action,
+.quick-action,
+.ghost-btn,
+.danger-btn,
+.docs-icon-btn {
+  min-height: 42px;
+  white-space: nowrap;
+}
+
 .danger-btn {
   color: var(--danger);
 }
@@ -323,7 +332,8 @@ textarea {
 }
 
 .strip-gallery {
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
+  justify-content: start;
   margin-top: 12px;
 }
 
@@ -367,12 +377,17 @@ textarea {
 }
 
 .strip-paper {
-  min-height: 92px;
-  padding: 10px;
+  min-height: 0;
+  aspect-ratio: 8.5 / 11;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 .strip-paper h3 {
   font-size: 1rem;
+  line-height: 1.3;
 }
 
 .strip-meta {
@@ -402,6 +417,10 @@ textarea {
   display: grid;
   gap: 8px;
   margin-top: 16px;
+}
+
+.strip-paper .gallery-lines {
+  margin-top: auto;
 }
 
 .gallery-lines span {
@@ -438,6 +457,8 @@ textarea {
   color: var(--blue);
   font-size: 0.82rem;
   font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .docs-topbar {
@@ -499,16 +520,18 @@ textarea {
   background: #fff;
   flex-wrap: wrap;
   align-items: center;
+  row-gap: 10px;
 }
 
 .page-nav-group {
   margin-left: auto;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .editor-main-shell {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 16px;
   padding: 16px;
 }
@@ -652,7 +675,8 @@ textarea.editor {
 
 .page-card {
   text-align: left;
-  padding: 10px;
+  width: 100%;
+  padding: 12px 14px;
   background: white;
 }
 
@@ -670,6 +694,21 @@ textarea.editor {
   color: var(--muted);
   margin-top: 4px;
   font-size: 0.85rem;
+}
+
+.page-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.page-actions .ghost-btn {
+  width: 100%;
+  padding-inline: 10px;
+}
+
+.sidebar-card .section-row {
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .file-item {
@@ -736,5 +775,9 @@ textarea.editor {
 
   .editor {
     padding: 34px 22px;
+  }
+
+  .strip-gallery {
+    grid-template-columns: 1fr;
   }
 }
