@@ -10,126 +10,159 @@
   </head>
   <body>
     <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand">
-          <p class="eyebrow">Secure contract cloud</p>
-          <h1>Contract Vault</h1>
-          <p class="subtle">Pick a document card, then edit it in Word mode or PDF page mode.</p>
-        </div>
+      <header class="app-header">
+        <button id="backBtn" class="back-btn hidden" type="button">← Back</button>
+        <div class="brand-mark">Contract Vault</div>
+        <button id="settingsBtn" class="ghost-btn" type="button">Cloud settings</button>
+      </header>
 
-        <div class="sidebar-actions">
-          <button id="newContractBtn" class="primary-btn">New contract</button>
-          <button id="duplicateBtn" class="secondary-btn" disabled>Generate from selected</button>
-          <button id="settingsBtn" class="secondary-btn">Cloud settings</button>
-        </div>
-
-        <label class="search">
-          <span>Find documents</span>
-          <input id="searchInput" type="search" placeholder="Search by contract name or category" />
-        </label>
-
-        <div id="contractList" class="contract-list"></div>
-      </aside>
-
-      <main class="workspace">
-        <header class="workspace-topbar">
-          <div class="title-column">
-            <p class="eyebrow">Document editor</p>
-            <input id="titleInput" class="title-input" type="text" value="" placeholder="Contract title" />
-            <div class="inline-meta">
-              <label>
-                <span>Category</span>
-                <input id="categoryInput" type="text" placeholder="Services" />
-              </label>
-              <span id="saveStatus" class="save-status">Loading...</span>
-            </div>
-          </div>
-
-          <div class="topbar-actions">
-            <div class="mode-switch" aria-label="Editing mode">
-              <button id="wordModeBtn" class="mode-btn active" type="button">Word</button>
-              <button id="pdfModeBtn" class="mode-btn" type="button">PDF</button>
-            </div>
-            <button id="downloadHtmlBtn" class="secondary-btn" disabled>Download HTML</button>
-            <button id="deleteBtn" class="danger-btn" disabled>Delete</button>
-          </div>
-        </header>
-
-        <section class="gallery-panel">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Documents</p>
-              <h2>Choose a contract card</h2>
-            </div>
-            <span id="galleryCount" class="panel-tag">0 cards</span>
-          </div>
-          <div id="documentGallery" class="document-gallery"></div>
-        </section>
-
-        <section class="toolbar">
-          <button data-command="undo">Undo</button>
-          <button data-command="redo">Redo</button>
-          <button data-command="bold"><strong>B</strong></button>
-          <button data-command="italic"><em>I</em></button>
-          <button data-command="underline"><u>U</u></button>
-          <button data-command="strikeThrough"><s>S</s></button>
-          <button data-command="insertUnorderedList">Bullets</button>
-          <button data-command="insertOrderedList">Numbering</button>
-          <button data-command="outdent">Outdent</button>
-          <button data-command="indent">Indent</button>
-          <button data-command="justifyLeft">Left</button>
-          <button data-command="justifyCenter">Center</button>
-          <button data-command="justifyRight">Right</button>
-          <button data-command="removeFormat">Clear</button>
-          <button data-action="h1">Heading</button>
-          <button data-action="h2">Subhead</button>
-          <button data-action="paragraph">Paragraph</button>
-          <button data-action="table">Table</button>
-          <button data-action="signature">Signature line</button>
-        </section>
-
-        <section class="document-grid">
-          <section class="editor-card">
-            <div id="editorShell" class="paper-frame word-mode">
-              <div id="editorModeBadge" class="editor-mode-badge">Word mode</div>
-              <div id="editor" class="editor" contenteditable="true"></div>
-            </div>
-          </section>
-
-          <aside class="assets-panel">
-            <div class="assets-header">
-              <div>
-                <p class="eyebrow">Files</p>
-                <h2>Attachments & imports</h2>
+      <main class="app-main">
+        <section id="homeView" class="view home-view">
+          <div class="hero-grid">
+            <section class="home-card">
+              <p class="eyebrow">Open file</p>
+              <h1>Pick a document and start fast</h1>
+              <div class="quick-grid">
+                <button id="homeDriveBtn" class="quick-action" type="button">
+                  <span>Google Drive</span>
+                  <small>Import from Drive</small>
+                </button>
+                <label class="quick-action file-label">
+                  <span>My computer</span>
+                  <small>Upload from device</small>
+                  <input id="fileInput" type="file" hidden />
+                </label>
+                <button id="homeRecentBtn" class="quick-action" type="button">
+                  <span>Recent contracts</span>
+                  <small>Open saved files</small>
+                </button>
+                <button id="homeTemplatesBtn" class="quick-action" type="button">
+                  <span>Template copy</span>
+                  <small>Duplicate selected file</small>
+                </button>
               </div>
-              <span id="fileCount" class="panel-tag">0 files</span>
-            </div>
+            </section>
 
-            <div class="assets-actions">
-              <label class="upload-btn">
-                Upload file
-                <input id="fileInput" type="file" hidden />
-              </label>
-              <button id="insertTextFileBtn" class="secondary-btn" disabled>Insert text file</button>
-              <button id="connectDriveBtn" class="secondary-btn">Connect Drive</button>
-            </div>
+            <section class="home-card accent-card">
+              <p class="eyebrow">Create new</p>
+              <h2>Make a contract without the hard setup</h2>
+              <button id="newContractBtn" class="primary-action" type="button">Blank page</button>
+              <p class="helper-copy">Create a simple contract first, then add pages, uploads, or Drive later.</p>
+            </section>
+          </div>
 
-            <div id="driveStatus" class="drive-status">Drive not connected.</div>
-            <div id="fileList" class="file-list"></div>
-          </aside>
+          <section class="dashboard-grid">
+            <section class="home-card">
+              <div class="section-row">
+                <div>
+                  <p class="eyebrow">Your files</p>
+                  <h2>Recent documents</h2>
+                </div>
+                <span id="galleryCount" class="pill-tag">0 files</span>
+              </div>
+              <input id="searchInput" class="search-input" type="search" placeholder="Search by contract name or category" />
+              <div id="documentGallery" class="document-gallery"></div>
+            </section>
+
+            <section class="home-card side-card">
+              <div class="section-row">
+                <div>
+                  <p class="eyebrow">Edit file</p>
+                  <h2>Quick actions</h2>
+                </div>
+              </div>
+              <div class="side-stack">
+                <button id="duplicateBtn" class="stack-btn" type="button" disabled>Duplicate selected</button>
+                <button id="insertTextFileBtn" class="stack-btn" type="button" disabled>Insert text file</button>
+                <button id="connectDriveBtn" class="stack-btn" type="button">Connect Drive</button>
+              </div>
+              <div id="driveStatus" class="drive-status">Drive not connected.</div>
+            </section>
+          </section>
         </section>
 
-        <section class="details-grid">
-          <article class="info-card">
-            <p class="eyebrow">Edit modes</p>
-            <h2>Word or PDF feel</h2>
-            <p>Use Word mode for flowing text edits, or switch to PDF mode for a tighter page-like drafting surface that feels more fixed and document-oriented.</p>
-          </article>
-          <article class="info-card">
-            <p class="eyebrow">Drive</p>
-            <h2>Google Drive handoff</h2>
-            <p>Use Google Picker to select or upload files from Drive after entering your Google Cloud client ID, API key, and project number in Cloud settings.</p>
-          </article>
+        <section id="editorView" class="view editor-view hidden">
+          <div class="editor-topbar">
+            <div class="editor-title-group">
+              <p class="eyebrow">Document editor</p>
+              <input id="titleInput" class="title-input" type="text" value="" placeholder="Contract title" />
+              <div class="meta-row">
+                <label>
+                  <span>Category</span>
+                  <input id="categoryInput" type="text" placeholder="Services" />
+                </label>
+                <span id="saveStatus" class="save-status">Loading...</span>
+              </div>
+            </div>
+
+            <div class="editor-actions">
+              <div class="mode-switch" aria-label="Editing mode">
+                <button id="wordModeBtn" class="mode-btn active" type="button">Word</button>
+                <button id="pdfModeBtn" class="mode-btn" type="button">PDF</button>
+              </div>
+              <button id="downloadHtmlBtn" class="ghost-btn" type="button" disabled>Download HTML</button>
+              <button id="deleteBtn" class="danger-btn" type="button" disabled>Delete</button>
+            </div>
+          </div>
+
+          <section class="editor-layout">
+            <aside class="pages-panel">
+              <div class="section-row">
+                <div>
+                  <p class="eyebrow">Pages</p>
+                  <h2>Rotate between pages</h2>
+                </div>
+              </div>
+              <div class="page-actions">
+                <button id="addPageBtn" class="stack-btn" type="button">Add page</button>
+                <button id="removePageBtn" class="stack-btn" type="button">Remove page</button>
+              </div>
+              <div id="pageList" class="page-list"></div>
+            </aside>
+
+            <section class="editor-stage">
+              <div class="toolbar">
+                <button data-command="undo">Undo</button>
+                <button data-command="redo">Redo</button>
+                <button data-command="bold"><strong>B</strong></button>
+                <button data-command="italic"><em>I</em></button>
+                <button data-command="underline"><u>U</u></button>
+                <button data-command="strikeThrough"><s>S</s></button>
+                <button data-command="insertUnorderedList">Bullets</button>
+                <button data-command="insertOrderedList">Numbering</button>
+                <button data-command="justifyLeft">Left</button>
+                <button data-command="justifyCenter">Center</button>
+                <button data-command="justifyRight">Right</button>
+                <button data-action="h1">Heading</button>
+                <button data-action="h2">Subhead</button>
+                <button data-action="paragraph">Paragraph</button>
+                <button data-action="table">Table</button>
+                <button data-action="signature">Signature line</button>
+              </div>
+
+              <div class="page-nav">
+                <button id="prevPageBtn" class="ghost-btn" type="button">← Prev</button>
+                <span id="pageIndicator" class="pill-tag">Page 1 of 1</span>
+                <button id="nextPageBtn" class="ghost-btn" type="button">Next →</button>
+              </div>
+
+              <div id="editorShell" class="paper-frame word-mode">
+                <div id="editorModeBadge" class="editor-mode-badge">Word mode</div>
+                <div id="editor" class="editor" contenteditable="true"></div>
+              </div>
+            </section>
+
+            <aside class="files-panel">
+              <div class="section-row">
+                <div>
+                  <p class="eyebrow">Files</p>
+                  <h2>Attachments</h2>
+                </div>
+                <span id="fileCount" class="pill-tag">0 files</span>
+              </div>
+              <div id="fileList" class="file-list"></div>
+            </aside>
+          </section>
         </section>
       </main>
     </div>
@@ -141,7 +174,7 @@
             <p class="eyebrow">Cloud settings</p>
             <h2>Google Drive and storage</h2>
           </div>
-          <button value="cancel" class="secondary-btn">Close</button>
+          <button value="cancel" class="ghost-btn" type="button">Close</button>
         </div>
 
         <label>
@@ -167,7 +200,7 @@
           </select>
         </label>
 
-        <button id="saveSettingsBtn" value="default" class="primary-btn">Save settings</button>
+        <button id="saveSettingsBtn" value="default" class="primary-action" type="submit">Save settings</button>
       </form>
     </dialog>
 

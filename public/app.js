@@ -7,6 +7,9 @@ const state = {
   isLoading: false,
   settings: null,
   editorMode: "word",
+  activePageIndex: 0,
+  pages: [],
+  currentView: "home",
   google: {
     tokenClient: null,
     accessToken: null,
@@ -15,29 +18,40 @@ const state = {
 };
 
 const elements = {
-  contractList: document.querySelector("#contractList"),
+  homeView: document.querySelector("#homeView"),
+  editorView: document.querySelector("#editorView"),
+  backBtn: document.querySelector("#backBtn"),
+  settingsBtn: document.querySelector("#settingsBtn"),
+  newContractBtn: document.querySelector("#newContractBtn"),
+  homeDriveBtn: document.querySelector("#homeDriveBtn"),
+  homeRecentBtn: document.querySelector("#homeRecentBtn"),
+  homeTemplatesBtn: document.querySelector("#homeTemplatesBtn"),
+  searchInput: document.querySelector("#searchInput"),
   documentGallery: document.querySelector("#documentGallery"),
   galleryCount: document.querySelector("#galleryCount"),
-  searchInput: document.querySelector("#searchInput"),
-  newContractBtn: document.querySelector("#newContractBtn"),
   duplicateBtn: document.querySelector("#duplicateBtn"),
-  settingsBtn: document.querySelector("#settingsBtn"),
-  deleteBtn: document.querySelector("#deleteBtn"),
-  downloadHtmlBtn: document.querySelector("#downloadHtmlBtn"),
-  wordModeBtn: document.querySelector("#wordModeBtn"),
-  pdfModeBtn: document.querySelector("#pdfModeBtn"),
-  titleInput: document.querySelector("#titleInput"),
-  categoryInput: document.querySelector("#categoryInput"),
-  editor: document.querySelector("#editor"),
-  editorShell: document.querySelector("#editorShell"),
-  editorModeBadge: document.querySelector("#editorModeBadge"),
-  saveStatus: document.querySelector("#saveStatus"),
-  fileInput: document.querySelector("#fileInput"),
   insertTextFileBtn: document.querySelector("#insertTextFileBtn"),
   connectDriveBtn: document.querySelector("#connectDriveBtn"),
+  driveStatus: document.querySelector("#driveStatus"),
+  fileInput: document.querySelector("#fileInput"),
+  titleInput: document.querySelector("#titleInput"),
+  categoryInput: document.querySelector("#categoryInput"),
+  saveStatus: document.querySelector("#saveStatus"),
+  wordModeBtn: document.querySelector("#wordModeBtn"),
+  pdfModeBtn: document.querySelector("#pdfModeBtn"),
+  downloadHtmlBtn: document.querySelector("#downloadHtmlBtn"),
+  deleteBtn: document.querySelector("#deleteBtn"),
+  addPageBtn: document.querySelector("#addPageBtn"),
+  removePageBtn: document.querySelector("#removePageBtn"),
+  prevPageBtn: document.querySelector("#prevPageBtn"),
+  nextPageBtn: document.querySelector("#nextPageBtn"),
+  pageIndicator: document.querySelector("#pageIndicator"),
+  pageList: document.querySelector("#pageList"),
+  editorShell: document.querySelector("#editorShell"),
+  editorModeBadge: document.querySelector("#editorModeBadge"),
+  editor: document.querySelector("#editor"),
   fileList: document.querySelector("#fileList"),
   fileCount: document.querySelector("#fileCount"),
-  driveStatus: document.querySelector("#driveStatus"),
   settingsDialog: document.querySelector("#settingsDialog"),
   settingsForm: document.querySelector("#settingsForm"),
   googleDriveClientId: document.querySelector("#googleDriveClientId"),
@@ -62,23 +76,28 @@ document.querySelectorAll(".toolbar button[data-action]").forEach(button => {
   });
 });
 
-elements.searchInput.addEventListener("input", () => {
-  renderContractList();
-  renderDocumentGallery();
-});
-elements.newContractBtn.addEventListener("click", createContract);
-elements.duplicateBtn.addEventListener("click", duplicateContract);
+elements.backBtn.addEventListener("click", () => setView("home"));
 elements.settingsBtn.addEventListener("click", openSettings);
-elements.deleteBtn.addEventListener("click", deleteContract);
-elements.downloadHtmlBtn.addEventListener("click", downloadHtml);
-elements.wordModeBtn.addEventListener("click", () => setEditorMode("word"));
-elements.pdfModeBtn.addEventListener("click", () => setEditorMode("pdf"));
+elements.newContractBtn.addEventListener("click", createContract);
+elements.homeDriveBtn.addEventListener("click", connectGoogleDrive);
+elements.homeRecentBtn.addEventListener("click", () => document.querySelector(".document-gallery")?.scrollIntoView({ behavior: "smooth" }));
+elements.homeTemplatesBtn.addEventListener("click", duplicateContract);
+elements.searchInput.addEventListener("input", renderDocumentGallery);
+elements.duplicateBtn.addEventListener("click", duplicateContract);
+elements.insertTextFileBtn.addEventListener("click", insertMostRecentTextFile);
+elements.connectDriveBtn.addEventListener("click", connectGoogleDrive);
+elements.fileInput.addEventListener("change", event => uploadSelectedFile(event.target.files?.[0]));
 elements.titleInput.addEventListener("input", scheduleSave);
 elements.categoryInput.addEventListener("input", scheduleSave);
 elements.editor.addEventListener("input", scheduleSave);
-elements.fileInput.addEventListener("change", event => uploadSelectedFile(event.target.files?.[0]));
-elements.insertTextFileBtn.addEventListener("click", insertMostRecentTextFile);
-elements.connectDriveBtn.addEventListener("click", connectGoogleDrive);
+elements.wordModeBtn.addEventListener("click", () => setEditorMode("word"));
+elements.pdfModeBtn.addEventListener("click", () => setEditorMode("pdf"));
+elements.downloadHtmlBtn.addEventListener("click", downloadHtml);
+elements.deleteBtn.addEventListener("click", deleteContract);
+elements.addPageBtn.addEventListener("click", addPage);
+elements.removePageBtn.addEventListener("click", removeCurrentPage);
+elements.prevPageBtn.addEventListener("click", () => changePage(state.activePageIndex - 1));
+elements.nextPageBtn.addEventListener("click", () => changePage(state.activePageIndex + 1));
 elements.settingsForm.addEventListener("submit", saveSettings);
 
 boot();
@@ -87,6 +106,7 @@ async function boot() {
   await loadSettings();
   initializeGoogleClients();
   setEditorMode("word");
+  setView("home");
   await loadContracts();
 }
 
@@ -103,19 +123,17 @@ async function loadContracts() {
   const response = await fetch("/api/contracts");
   const data = await response.json();
   state.contracts = data.contracts;
-  renderContractList();
   renderDocumentGallery();
 
   if (state.contracts[0]) {
-    await selectContract(state.contracts[0].id);
+    await selectContract(state.contracts[0].id, { openEditor: false });
   } else {
     setStatus("No contracts yet.");
   }
 }
 
-async function selectContract(id) {
+async function selectContract(id, options = { openEditor: true }) {
   state.activeId = id;
-  renderContractList();
   renderDocumentGallery();
   lockEditor(true);
   setStatus("Loading contract...");
@@ -126,13 +144,61 @@ async function selectContract(id) {
   state.activeFiles = data.files || [];
   elements.titleInput.value = data.contract.title;
   elements.categoryInput.value = data.contract.category;
-  elements.editor.innerHTML = data.contract.content;
+
+  const parsed = parseStoredContent(data.contract.content, data.contract.title);
+  state.pages = parsed.pages;
+  state.activePageIndex = 0;
+  syncEditorToPage();
+  renderPageList();
   renderFileList();
+
   lockEditor(false);
   elements.duplicateBtn.disabled = false;
   elements.deleteBtn.disabled = false;
   elements.downloadHtmlBtn.disabled = false;
   setStatus(`Saved ${formatDate(data.contract.updatedAt)}`);
+
+  if (options.openEditor) {
+    setView("editor");
+  }
+}
+
+function parseStoredContent(content, fallbackTitle) {
+  if (typeof content === "string") {
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed.pages) && parsed.pages.length) {
+        return {
+          pages: parsed.pages.map((page, index) => ({
+            id: page.id || cryptoRandomId(),
+            name: page.name || `Page ${index + 1}`,
+            html: typeof page.html === "string" ? page.html : defaultPageHtml(fallbackTitle)
+          }))
+        };
+      }
+    } catch {}
+  }
+
+  return {
+    pages: [
+      {
+        id: cryptoRandomId(),
+        name: "Page 1",
+        html: typeof content === "string" && content.trim() ? content : defaultPageHtml(fallbackTitle)
+      }
+    ]
+  };
+}
+
+function serializePages() {
+  return JSON.stringify({
+    version: 1,
+    pages: state.pages.map(page => ({
+      id: page.id,
+      name: page.name,
+      html: page.html
+    }))
+  });
 }
 
 function filteredContracts() {
@@ -143,39 +209,9 @@ function filteredContracts() {
   });
 }
 
-function renderContractList() {
-  const filtered = filteredContracts();
-  elements.contractList.innerHTML = "";
-
-  for (const contract of filtered) {
-    const button = document.createElement("button");
-    button.className = `contract-item ${contract.id === state.activeId ? "active" : ""}`;
-    button.innerHTML = `
-      <h3>${escapeHtml(contract.title)}</h3>
-      <div class="contract-meta">
-        <span>${escapeHtml(contract.category)}</span>
-        <span>${contract.fileCount} files</span>
-      </div>
-      <div class="contract-meta">
-        <span>${contract.sourceContractId ? "Generated" : "Original"}</span>
-        <span>${formatDate(contract.updatedAt)}</span>
-      </div>
-    `;
-    button.addEventListener("click", () => selectContract(contract.id));
-    elements.contractList.appendChild(button);
-  }
-
-  if (!filtered.length) {
-    const empty = document.createElement("p");
-    empty.className = "subtle";
-    empty.textContent = "No contracts match your search.";
-    elements.contractList.appendChild(empty);
-  }
-}
-
 function renderDocumentGallery() {
   const filtered = filteredContracts();
-  elements.galleryCount.textContent = `${filtered.length} card${filtered.length === 1 ? "" : "s"}`;
+  elements.galleryCount.textContent = `${filtered.length} file${filtered.length === 1 ? "" : "s"}`;
   elements.documentGallery.innerHTML = "";
 
   for (const contract of filtered) {
@@ -193,20 +229,91 @@ function renderDocumentGallery() {
         </div>
       </div>
       <div class="gallery-card-meta">
-        <span>${contract.sourceContractId ? "Generated from template" : "Base contract"}</span>
+        <span>${contract.sourceContractId ? "Template copy" : "Base contract"}</span>
         <span>${formatDate(contract.updatedAt)}</span>
       </div>
     `;
-    button.addEventListener("click", () => selectContract(contract.id));
+    button.addEventListener("click", () => selectContract(contract.id, { openEditor: true }));
     elements.documentGallery.appendChild(button);
   }
 
   if (!filtered.length) {
     const empty = document.createElement("article");
     empty.className = "gallery-empty";
-    empty.textContent = "No document cards found for this search.";
+    empty.textContent = "No files found. Create a blank page to get started.";
     elements.documentGallery.appendChild(empty);
   }
+}
+
+function renderPageList() {
+  elements.pageList.innerHTML = "";
+  elements.pageIndicator.textContent = `Page ${state.activePageIndex + 1} of ${state.pages.length}`;
+  elements.prevPageBtn.disabled = state.activePageIndex === 0;
+  elements.nextPageBtn.disabled = state.activePageIndex >= state.pages.length - 1;
+  elements.removePageBtn.disabled = state.pages.length <= 1;
+
+  state.pages.forEach((page, index) => {
+    const button = document.createElement("button");
+    button.className = `page-card ${index === state.activePageIndex ? "active" : ""}`;
+    button.innerHTML = `
+      <strong>${escapeHtml(page.name)}</strong>
+      <span>${index === state.activePageIndex ? "Open now" : "Click to open"}</span>
+    `;
+    button.addEventListener("click", () => changePage(index));
+    elements.pageList.appendChild(button);
+  });
+}
+
+function syncEditorToPage() {
+  const page = state.pages[state.activePageIndex];
+  elements.editor.innerHTML = page?.html || "";
+  renderPageList();
+}
+
+function storeCurrentPageHtml() {
+  if (!state.pages[state.activePageIndex]) {
+    return;
+  }
+  state.pages[state.activePageIndex].html = elements.editor.innerHTML;
+}
+
+function changePage(nextIndex) {
+  if (nextIndex < 0 || nextIndex >= state.pages.length) {
+    return;
+  }
+  storeCurrentPageHtml();
+  state.activePageIndex = nextIndex;
+  syncEditorToPage();
+}
+
+function addPage() {
+  storeCurrentPageHtml();
+  const nextPage = {
+    id: cryptoRandomId(),
+    name: `Page ${state.pages.length + 1}`,
+    html: defaultPageHtml(elements.titleInput.value || "New contract")
+  };
+  state.pages.push(nextPage);
+  state.activePageIndex = state.pages.length - 1;
+  syncEditorToPage();
+  scheduleSave();
+}
+
+function removeCurrentPage() {
+  if (state.pages.length <= 1) {
+    return;
+  }
+  state.pages.splice(state.activePageIndex, 1);
+  state.activePageIndex = Math.max(0, state.activePageIndex - 1);
+  syncEditorToPage();
+  scheduleSave();
+}
+
+function setView(view) {
+  state.currentView = view;
+  elements.homeView.classList.toggle("hidden", view !== "home");
+  elements.editorView.classList.toggle("hidden", view !== "editor");
+  elements.backBtn.classList.toggle("hidden", view !== "editor");
 }
 
 function renderFileList() {
@@ -217,7 +324,7 @@ function renderFileList() {
   if (!state.activeFiles.length) {
     const empty = document.createElement("p");
     empty.className = "drive-status";
-    empty.textContent = "Upload documents, templates, PDFs, or text files here.";
+    empty.textContent = "No attachments yet.";
     elements.fileList.appendChild(empty);
     return;
   }
@@ -231,34 +338,24 @@ function renderFileList() {
         <span>${escapeHtml(file.mimeType)}</span>
         <span>${formatBytes(file.sizeBytes)}</span>
       </div>
-      <div class="file-meta">
-        <span>${formatDate(file.updatedAt)}</span>
-        <span>${isTextLikeFile(file) ? "Insertable" : "Stored"}</span>
-      </div>
     `;
 
     const actions = document.createElement("div");
     actions.className = "file-item-actions";
 
     const downloadBtn = document.createElement("button");
-    downloadBtn.className = "secondary-btn";
+    downloadBtn.className = "ghost-btn";
     downloadBtn.textContent = "Download";
     downloadBtn.addEventListener("click", () => downloadFile(file.id));
     actions.appendChild(downloadBtn);
 
     if (isTextLikeFile(file)) {
       const insertBtn = document.createElement("button");
-      insertBtn.className = "secondary-btn";
+      insertBtn.className = "ghost-btn";
       insertBtn.textContent = "Insert";
       insertBtn.addEventListener("click", () => insertFileIntoEditor(file.id));
       actions.appendChild(insertBtn);
     }
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "danger-btn";
-    deleteBtn.textContent = "Remove";
-    deleteBtn.addEventListener("click", () => deleteFile(file.id));
-    actions.appendChild(deleteBtn);
 
     item.appendChild(actions);
     elements.fileList.appendChild(item);
@@ -272,14 +369,27 @@ async function createContract() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       title: "New contract",
-      category: "General"
+      category: "General",
+      content: serializeNewContract()
     })
   });
   const data = await response.json();
   state.contracts.unshift(toListItem(data.contract, data.files));
-  renderContractList();
   renderDocumentGallery();
-  await selectContract(data.contract.id);
+  await selectContract(data.contract.id, { openEditor: true });
+}
+
+function serializeNewContract() {
+  return JSON.stringify({
+    version: 1,
+    pages: [
+      {
+        id: cryptoRandomId(),
+        name: "Page 1",
+        html: defaultPageHtml("New contract")
+      }
+    ]
+  });
 }
 
 async function duplicateContract() {
@@ -287,15 +397,14 @@ async function duplicateContract() {
     return;
   }
 
-  setStatus("Generating from selected contract...");
+  setStatus("Creating from selected...");
   const response = await fetch(`/api/contracts/${state.activeId}/duplicate`, {
     method: "POST"
   });
   const data = await response.json();
   state.contracts.unshift(toListItem(data.contract, data.files));
-  renderContractList();
   renderDocumentGallery();
-  await selectContract(data.contract.id);
+  await selectContract(data.contract.id, { openEditor: true });
 }
 
 async function deleteContract() {
@@ -303,32 +412,20 @@ async function deleteContract() {
     return;
   }
 
-  const confirmed = window.confirm("Delete this contract permanently?");
-  if (!confirmed) {
+  if (!window.confirm("Delete this contract permanently?")) {
     return;
   }
 
-  setStatus("Deleting...");
   await fetch(`/api/contracts/${state.activeId}`, { method: "DELETE" });
   state.contracts = state.contracts.filter(contract => contract.id !== state.activeId);
   state.activeId = null;
   state.activeContract = null;
   state.activeFiles = [];
-  elements.titleInput.value = "";
-  elements.categoryInput.value = "";
-  elements.editor.innerHTML = "";
-  elements.duplicateBtn.disabled = true;
-  elements.deleteBtn.disabled = true;
-  elements.downloadHtmlBtn.disabled = true;
-  renderContractList();
+  state.pages = [];
   renderDocumentGallery();
   renderFileList();
-
-  if (state.contracts[0]) {
-    await selectContract(state.contracts[0].id);
-  } else {
-    setStatus("Contract deleted.");
-  }
+  setView("home");
+  setStatus("Contract deleted.");
 }
 
 function scheduleSave() {
@@ -346,10 +443,12 @@ async function saveActiveContract() {
     return;
   }
 
+  storeCurrentPageHtml();
+
   const payload = {
     title: elements.titleInput.value.trim() || "Untitled contract",
     category: elements.categoryInput.value.trim() || "General",
-    content: elements.editor.innerHTML
+    content: serializePages()
   };
 
   const response = await fetch(`/api/contracts/${state.activeId}`, {
@@ -366,7 +465,6 @@ async function saveActiveContract() {
     item.updatedAt = data.contract.updatedAt;
   }
 
-  renderContractList();
   renderDocumentGallery();
   setStatus(`Saved ${formatDate(data.contract.updatedAt)}`);
 }
@@ -376,7 +474,6 @@ async function uploadSelectedFile(file) {
     return;
   }
 
-  setStatus(`Uploading ${file.name}...`);
   const base64Data = await readFileAsBase64(file);
   const response = await fetch(`/api/contracts/${state.activeId}/files`, {
     method: "POST",
@@ -391,6 +488,7 @@ async function uploadSelectedFile(file) {
   state.activeFiles.unshift(data.file);
   syncFileCountOnList();
   renderFileList();
+  setView("editor");
   elements.fileInput.value = "";
   setStatus(`Uploaded ${file.name}`);
 }
@@ -406,14 +504,6 @@ async function downloadFile(fileId) {
   link.download = file.name;
   link.click();
   URL.revokeObjectURL(url);
-}
-
-async function deleteFile(fileId) {
-  await fetch(`/api/contracts/${state.activeId}/files/${fileId}`, { method: "DELETE" });
-  state.activeFiles = state.activeFiles.filter(file => file.id !== fileId);
-  syncFileCountOnList();
-  renderFileList();
-  setStatus("File removed.");
 }
 
 async function insertMostRecentTextFile() {
@@ -434,25 +524,11 @@ async function insertFileIntoEditor(fileId) {
 
   document.execCommand("insertHTML", false, markup);
   scheduleSave();
-  setStatus(`Inserted ${file.name} into the document.`);
 }
 
 function downloadHtml() {
-  if (!state.activeContract) {
-    return;
-  }
-
-  const html = `
-    <!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <title>${escapeHtml(elements.titleInput.value || "Contract")}</title>
-      </head>
-      <body>${elements.editor.innerHTML}</body>
-    </html>
-  `.trim();
-
+  storeCurrentPageHtml();
+  const html = state.pages.map(page => `<section data-page="${escapeHtml(page.name)}">${page.html}</section>`).join("\n");
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -467,32 +543,20 @@ function runEditorAction(action) {
     document.execCommand("formatBlock", false, "<h1>");
     return;
   }
-
   if (action === "h2") {
     document.execCommand("formatBlock", false, "<h2>");
     return;
   }
-
   if (action === "paragraph") {
     document.execCommand("formatBlock", false, "<p>");
     return;
   }
-
   if (action === "table") {
-    document.execCommand(
-      "insertHTML",
-      false,
-      `<table><thead><tr><th>Item</th><th>Due date</th><th>Notes</th></tr></thead><tbody><tr><td></td><td></td><td></td></tr></tbody></table><p></p>`
-    );
+    document.execCommand("insertHTML", false, `<table><thead><tr><th>Item</th><th>Due date</th><th>Notes</th></tr></thead><tbody><tr><td></td><td></td><td></td></tr></tbody></table><p></p>`);
     return;
   }
-
   if (action === "signature") {
-    document.execCommand(
-      "insertHTML",
-      false,
-      `<p>Signature: ____________________________</p><p>Name: _________________________________</p>`
-    );
+    document.execCommand("insertHTML", false, `<p>Signature: ____________________________</p><p>Name: _________________________________</p>`);
   }
 }
 
@@ -514,7 +578,6 @@ function openSettings() {
 
 async function saveSettings(event) {
   event.preventDefault();
-
   const payload = {
     googleDriveClientId: elements.googleDriveClientId.value.trim(),
     googleDriveApiKey: elements.googleDriveApiKey.value.trim(),
@@ -544,7 +607,6 @@ function hydrateSettingsForm() {
 
 function initializeGoogleClients() {
   state.google.tokenClient = null;
-
   if (!state.settings?.googleDriveClientId) {
     updateDriveStatus();
     return;
@@ -559,7 +621,6 @@ function initializeGoogleClients() {
           elements.driveStatus.textContent = `Drive authorization failed: ${response.error}`;
           return;
         }
-
         state.google.accessToken = response.access_token;
         updateDriveStatus();
         openDrivePicker();
@@ -581,21 +642,17 @@ function connectGoogleDrive() {
     openSettings();
     return;
   }
-
   if (!state.google.tokenClient) {
     initializeGoogleClients();
   }
-
   if (!state.google.tokenClient) {
-    elements.driveStatus.textContent = "Google Identity Services has not loaded yet.";
+    elements.driveStatus.textContent = "Google sign-in is still loading.";
     return;
   }
-
   if (state.google.accessToken) {
     openDrivePicker();
     return;
   }
-
   elements.driveStatus.textContent = "Requesting Drive access...";
   state.google.tokenClient.requestAccessToken({ prompt: "consent" });
 }
@@ -606,15 +663,12 @@ function openDrivePicker() {
     return;
   }
 
-  const docsView = new google.picker.DocsView(google.picker.ViewId.DOCS);
-  const uploadView = new google.picker.DocsUploadView();
-
   const picker = new google.picker.PickerBuilder()
     .setAppId(state.settings.googleDriveProjectNumber)
     .setDeveloperKey(state.settings.googleDriveApiKey)
     .setOAuthToken(state.google.accessToken)
-    .addView(docsView)
-    .addView(uploadView)
+    .addView(new google.picker.DocsView(google.picker.ViewId.DOCS))
+    .addView(new google.picker.DocsUploadView())
     .setCallback(handleDrivePickerSelection)
     .build();
 
@@ -623,31 +677,21 @@ function openDrivePicker() {
 }
 
 async function handleDrivePickerSelection(data) {
-  if (!window.google?.picker) {
-    return;
-  }
-
-  if (data.action !== google.picker.Action.PICKED || !data.docs?.length) {
+  if (!window.google?.picker || data.action !== google.picker.Action.PICKED || !data.docs?.length) {
     return;
   }
 
   const doc = data.docs[0];
-  elements.driveStatus.textContent = `Importing ${doc.name} from Drive...`;
-
   try {
     const response = await fetch(`https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`, {
-      headers: {
-        Authorization: `Bearer ${state.google.accessToken}`
-      }
+      headers: { Authorization: `Bearer ${state.google.accessToken}` }
     });
-
     if (!response.ok) {
-      throw new Error("The selected Drive file could not be downloaded directly.");
+      throw new Error("Could not download the selected Drive file.");
     }
 
     const blob = await response.blob();
     const base64Data = await blobToBase64(blob);
-
     const uploadResponse = await fetch(`/api/contracts/${state.activeId}/files`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -658,16 +702,9 @@ async function handleDrivePickerSelection(data) {
       })
     });
     const uploadData = await uploadResponse.json();
-
     state.activeFiles.unshift(uploadData.file);
     syncFileCountOnList();
     renderFileList();
-
-    if (isTextLikeFile(uploadData.file)) {
-      await insertFileIntoEditor(uploadData.file.id);
-    }
-
-    elements.driveStatus.textContent = `Imported ${doc.name} from Drive.`;
   } catch (error) {
     elements.driveStatus.textContent = error.message;
   }
@@ -678,13 +715,22 @@ function updateDriveStatus() {
     elements.driveStatus.textContent = "Drive not connected. Add Google Cloud keys in Cloud settings.";
     return;
   }
+  elements.driveStatus.textContent = state.google.accessToken ? "Drive ready." : "Drive configured. Click Connect Drive.";
+}
 
-  if (state.google.accessToken) {
-    elements.driveStatus.textContent = `Drive ready in ${state.settings.storageMode} mode.`;
-    return;
+function syncFileCountOnList() {
+  const item = state.contracts.find(contract => contract.id === state.activeId);
+  if (item) {
+    item.fileCount = state.activeFiles.length;
   }
+  renderDocumentGallery();
+}
 
-  elements.driveStatus.textContent = "Drive configured. Click Connect Drive to import or upload.";
+function lockEditor(disabled) {
+  state.isLoading = disabled;
+  elements.titleInput.disabled = disabled;
+  elements.categoryInput.disabled = disabled;
+  elements.editor.contentEditable = disabled ? "false" : "true";
 }
 
 function setStatus(message) {
@@ -692,10 +738,7 @@ function setStatus(message) {
 }
 
 function formatDate(value) {
-  if (!value) {
-    return "just now";
-  }
-
+  if (!value) return "just now";
   return new Date(value).toLocaleString([], {
     month: "short",
     day: "numeric",
@@ -705,14 +748,8 @@ function formatDate(value) {
 }
 
 function formatBytes(value) {
-  if (value < 1024) {
-    return `${value} B`;
-  }
-
-  if (value < 1024 * 1024) {
-    return `${(value / 1024).toFixed(1)} KB`;
-  }
-
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -728,22 +765,6 @@ function toListItem(contract, files = []) {
   };
 }
 
-function syncFileCountOnList() {
-  const item = state.contracts.find(contract => contract.id === state.activeId);
-  if (item) {
-    item.fileCount = state.activeFiles.length;
-  }
-  renderContractList();
-  renderDocumentGallery();
-}
-
-function lockEditor(disabled) {
-  state.isLoading = disabled;
-  elements.titleInput.disabled = disabled;
-  elements.categoryInput.disabled = disabled;
-  elements.editor.contentEditable = disabled ? "false" : "true";
-}
-
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -757,13 +778,14 @@ function slugify(value) {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
+function defaultPageHtml(title) {
+  return `<h1>${escapeHtml(title)}</h1><p>Write your contract content here.</p><p>Add terms, pricing, and signatures on this page.</p>`;
+}
+
 function readFileAsBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result);
-      resolve(result.split(",")[1]);
-    };
+    reader.onload = () => resolve(String(reader.result).split(",")[1]);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
@@ -786,4 +808,8 @@ function base64ToBlob(base64, mimeType) {
 
 function isTextLikeFile(file) {
   return /text|json|xml|html|markdown/.test(file.mimeType);
+}
+
+function cryptoRandomId() {
+  return Math.random().toString(36).slice(2, 10);
 }
