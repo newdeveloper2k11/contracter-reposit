@@ -203,6 +203,10 @@ select {
   margin-top: 18px;
 }
 
+.compact-gallery {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
 .gallery-card,
 .gallery-empty,
 .page-card,
@@ -214,12 +218,25 @@ select {
 .gallery-card {
   background: #f6f6f6;
   color: black;
-  padding: 20px;
-  cursor: pointer;
+  padding: 14px;
 }
 
 .gallery-card.active {
   outline: 3px solid rgba(153, 88, 255, 0.45);
+}
+
+.compact-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-open-area {
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
 }
 
 .gallery-paper {
@@ -228,6 +245,11 @@ select {
   border-radius: 18px;
   padding: 18px;
   box-shadow: inset 0 -40px 60px rgba(0, 0, 0, 0.03);
+}
+
+.compact-paper {
+  min-height: 170px;
+  padding: 14px;
 }
 
 .gallery-paper-top {
@@ -246,6 +268,10 @@ select {
 .gallery-paper p {
   margin: 0;
   color: #616161;
+}
+
+.compact-lines {
+  margin-top: 18px;
 }
 
 .gallery-lines {
@@ -268,6 +294,17 @@ select {
   margin-top: 16px;
   color: #4f4f4f;
   font-size: 0.92rem;
+}
+
+.compact-meta {
+  font-size: 0.82rem;
+  margin-top: 0;
+}
+
+.gallery-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .pill-tag {

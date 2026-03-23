@@ -53,6 +53,7 @@ const elements = {
   fileList: document.querySelector("#fileList"),
   fileCount: document.querySelector("#fileCount"),
   settingsDialog: document.querySelector("#settingsDialog"),
+  settingsCloseBtn: document.querySelector("#settingsCloseBtn"),
   settingsForm: document.querySelector("#settingsForm"),
   googleDriveClientId: document.querySelector("#googleDriveClientId"),
   googleDriveApiKey: document.querySelector("#googleDriveApiKey"),
@@ -76,17 +77,18 @@ document.querySelectorAll(".toolbar button[data-action]").forEach(button => {
   });
 });
 
-elements.backBtn.addEventListener("click", () => setView("home"));
+elements.backBtn.addEventListener("click", () => navigateHome());
 elements.settingsBtn.addEventListener("click", openSettings);
 elements.newContractBtn.addEventListener("click", createContract);
 elements.homeDriveBtn.addEventListener("click", connectGoogleDrive);
-elements.homeRecentBtn.addEventListener("click", () => document.querySelector(".document-gallery")?.scrollIntoView({ behavior: "smooth" }));
+elements.homeRecentBtn.addEventListener("click", () => elements.documentGallery.scrollIntoView({ behavior: "smooth" }));
 elements.homeTemplatesBtn.addEventListener("click", duplicateContract);
 elements.searchInput.addEventListener("input", renderDocumentGallery);
 elements.duplicateBtn.addEventListener("click", duplicateContract);
 elements.insertTextFileBtn.addEventListener("click", insertMostRecentTextFile);
 elements.connectDriveBtn.addEventListener("click", connectGoogleDrive);
 elements.fileInput.addEventListener("change", event => uploadSelectedFile(event.target.files?.[0]));
+elements.settingsCloseBtn.addEventListener("click", () => elements.settingsDialog.close());
 elements.titleInput.addEventListener("input", scheduleSave);
 elements.categoryInput.addEventListener("input", scheduleSave);
 elements.editor.addEventListener("input", scheduleSave);
@@ -99,6 +101,7 @@ elements.removePageBtn.addEventListener("click", removeCurrentPage);
 elements.prevPageBtn.addEventListener("click", () => changePage(state.activePageIndex - 1));
 elements.nextPageBtn.addEventListener("click", () => changePage(state.activePageIndex + 1));
 elements.settingsForm.addEventListener("submit", saveSettings);
+window.addEventListener("popstate", handleRoute);
 
 boot();
 
@@ -106,8 +109,8 @@ async function boot() {
   await loadSettings();
   initializeGoogleClients();
   setEditorMode("word");
-  setView("home");
   await loadContracts();
+  await handleRoute();
 }
 
 async function loadSettings() {
@@ -119,26 +122,43 @@ async function loadSettings() {
 }
 
 async function loadContracts() {
-  setStatus("Loading contracts...");
   const response = await fetch("/api/contracts");
   const data = await response.json();
   state.contracts = data.contracts;
   renderDocumentGallery();
-
-  if (state.contracts[0]) {
-    await selectContract(state.contracts[0].id, { openEditor: false });
-  } else {
-    setStatus("No contracts yet.");
-  }
 }
 
-async function selectContract(id, options = { openEditor: true }) {
+async function handleRoute() {
+  const url = new URL(window.location.href);
+  const docId = url.searchParams.get("doc");
+
+  if (!docId) {
+    setView("home");
+    if (state.contracts.length && !state.activeId) {
+      await selectContract(state.contracts[0].id, { openEditor: false, replaceRoute: true });
+    }
+    return;
+  }
+
+  await selectContract(docId, { openEditor: true, replaceRoute: true });
+}
+
+async function selectContract(id, options = { openEditor: true, replaceRoute: false }) {
+  if (!id) {
+    return;
+  }
+
   state.activeId = id;
   renderDocumentGallery();
   lockEditor(true);
   setStatus("Loading contract...");
 
   const response = await fetch(`/api/contracts/${id}`);
+  if (!response.ok) {
+    navigateHome();
+    return;
+  }
+
   const data = await response.json();
   state.activeContract = data.contract;
   state.activeFiles = data.files || [];
@@ -161,6 +181,31 @@ async function selectContract(id, options = { openEditor: true }) {
   if (options.openEditor) {
     setView("editor");
   }
+
+  if (options.openEditor) {
+    updateRoute(id, options.replaceRoute);
+  }
+}
+
+function updateRoute(id, replace = false) {
+  const url = new URL(window.location.href);
+  if (!id) {
+    url.searchParams.delete("doc");
+  } else {
+    url.searchParams.set("doc", id);
+  }
+
+  const next = `${url.pathname}${url.search}`;
+  if (replace) {
+    window.history.replaceState({}, "", next);
+  } else {
+    window.history.pushState({}, "", next);
+  }
+}
+
+function navigateHome() {
+  setView("home");
+  updateRoute("", false);
 }
 
 function parseStoredContent(content, fallbackTitle) {
@@ -215,26 +260,40 @@ function renderDocumentGallery() {
   elements.documentGallery.innerHTML = "";
 
   for (const contract of filtered) {
-    const button = document.createElement("button");
-    button.className = `gallery-card ${contract.id === state.activeId ? "active" : ""}`;
-    button.innerHTML = `
-      <div class="gallery-paper">
-        <div class="gallery-paper-top"></div>
-        <h3>${escapeHtml(contract.title)}</h3>
-        <p>${escapeHtml(contract.category)}</p>
-        <div class="gallery-lines">
-          <span></span>
-          <span></span>
-          <span></span>
+    const card = document.createElement("article");
+    card.className = `gallery-card compact-card ${contract.id === state.activeId ? "active" : ""}`;
+    card.innerHTML = `
+      <button class="card-open-area" type="button">
+        <div class="gallery-paper compact-paper">
+          <div class="gallery-paper-top"></div>
+          <h3>${escapeHtml(contract.title)}</h3>
+          <p>${escapeHtml(contract.category)}</p>
+          <div class="gallery-lines compact-lines">
+            <span></span>
+            <span></span>
+          </div>
         </div>
-      </div>
-      <div class="gallery-card-meta">
+      </button>
+      <div class="gallery-card-meta compact-meta">
         <span>${contract.sourceContractId ? "Template copy" : "Base contract"}</span>
         <span>${formatDate(contract.updatedAt)}</span>
       </div>
+      <div class="gallery-card-actions">
+        <button class="ghost-btn card-action-open" type="button">Open</button>
+        <button class="ghost-btn card-action-dup" type="button">Duplicate</button>
+        <button class="ghost-btn card-action-edit" type="button">Edit</button>
+      </div>
     `;
-    button.addEventListener("click", () => selectContract(contract.id, { openEditor: true }));
-    elements.documentGallery.appendChild(button);
+
+    card.querySelector(".card-open-area").addEventListener("click", () => selectContract(contract.id, { openEditor: true, replaceRoute: false }));
+    card.querySelector(".card-action-open").addEventListener("click", () => selectContract(contract.id, { openEditor: false, replaceRoute: false }));
+    card.querySelector(".card-action-edit").addEventListener("click", () => selectContract(contract.id, { openEditor: true, replaceRoute: false }));
+    card.querySelector(".card-action-dup").addEventListener("click", async () => {
+      state.activeId = contract.id;
+      await duplicateContract();
+    });
+
+    elements.documentGallery.appendChild(card);
   }
 
   if (!filtered.length) {
@@ -255,10 +314,7 @@ function renderPageList() {
   state.pages.forEach((page, index) => {
     const button = document.createElement("button");
     button.className = `page-card ${index === state.activePageIndex ? "active" : ""}`;
-    button.innerHTML = `
-      <strong>${escapeHtml(page.name)}</strong>
-      <span>${index === state.activePageIndex ? "Open now" : "Click to open"}</span>
-    `;
+    button.innerHTML = `<strong>${escapeHtml(page.name)}</strong><span>${index === state.activePageIndex ? "Open now" : "Open page"}</span>`;
     button.addEventListener("click", () => changePage(index));
     elements.pageList.appendChild(button);
   });
@@ -271,10 +327,9 @@ function syncEditorToPage() {
 }
 
 function storeCurrentPageHtml() {
-  if (!state.pages[state.activePageIndex]) {
-    return;
+  if (state.pages[state.activePageIndex]) {
+    state.pages[state.activePageIndex].html = elements.editor.innerHTML;
   }
-  state.pages[state.activePageIndex].html = elements.editor.innerHTML;
 }
 
 function changePage(nextIndex) {
@@ -288,12 +343,11 @@ function changePage(nextIndex) {
 
 function addPage() {
   storeCurrentPageHtml();
-  const nextPage = {
+  state.pages.push({
     id: cryptoRandomId(),
     name: `Page ${state.pages.length + 1}`,
     html: defaultPageHtml(elements.titleInput.value || "New contract")
-  };
-  state.pages.push(nextPage);
+  });
   state.activePageIndex = state.pages.length - 1;
   syncEditorToPage();
   scheduleSave();
@@ -363,33 +417,22 @@ function renderFileList() {
 }
 
 async function createContract() {
-  setStatus("Creating contract...");
   const response = await fetch("/api/contracts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       title: "New contract",
       category: "General",
-      content: serializeNewContract()
+      content: JSON.stringify({
+        version: 1,
+        pages: [{ id: cryptoRandomId(), name: "Page 1", html: defaultPageHtml("New contract") }]
+      })
     })
   });
   const data = await response.json();
   state.contracts.unshift(toListItem(data.contract, data.files));
   renderDocumentGallery();
-  await selectContract(data.contract.id, { openEditor: true });
-}
-
-function serializeNewContract() {
-  return JSON.stringify({
-    version: 1,
-    pages: [
-      {
-        id: cryptoRandomId(),
-        name: "Page 1",
-        html: defaultPageHtml("New contract")
-      }
-    ]
-  });
+  await selectContract(data.contract.id, { openEditor: true, replaceRoute: false });
 }
 
 async function duplicateContract() {
@@ -397,22 +440,15 @@ async function duplicateContract() {
     return;
   }
 
-  setStatus("Creating from selected...");
-  const response = await fetch(`/api/contracts/${state.activeId}/duplicate`, {
-    method: "POST"
-  });
+  const response = await fetch(`/api/contracts/${state.activeId}/duplicate`, { method: "POST" });
   const data = await response.json();
   state.contracts.unshift(toListItem(data.contract, data.files));
   renderDocumentGallery();
-  await selectContract(data.contract.id, { openEditor: true });
+  await selectContract(data.contract.id, { openEditor: true, replaceRoute: false });
 }
 
 async function deleteContract() {
-  if (!state.activeId) {
-    return;
-  }
-
-  if (!window.confirm("Delete this contract permanently?")) {
+  if (!state.activeId || !window.confirm("Delete this contract permanently?")) {
     return;
   }
 
@@ -424,16 +460,13 @@ async function deleteContract() {
   state.pages = [];
   renderDocumentGallery();
   renderFileList();
-  setView("home");
-  setStatus("Contract deleted.");
+  navigateHome();
 }
 
 function scheduleSave() {
   if (!state.activeId || state.isLoading) {
     return;
   }
-
-  setStatus("Saving draft...");
   clearTimeout(state.saveTimer);
   state.saveTimer = window.setTimeout(saveActiveContract, 700);
 }
@@ -442,7 +475,6 @@ async function saveActiveContract() {
   if (!state.activeId) {
     return;
   }
-
   storeCurrentPageHtml();
 
   const payload = {
@@ -457,14 +489,12 @@ async function saveActiveContract() {
     body: JSON.stringify(payload)
   });
   const data = await response.json();
-
   const item = state.contracts.find(contract => contract.id === state.activeId);
   if (item) {
     item.title = data.contract.title;
     item.category = data.contract.category;
     item.updatedAt = data.contract.updatedAt;
   }
-
   renderDocumentGallery();
   setStatus(`Saved ${formatDate(data.contract.updatedAt)}`);
 }
@@ -490,7 +520,6 @@ async function uploadSelectedFile(file) {
   renderFileList();
   setView("editor");
   elements.fileInput.value = "";
-  setStatus(`Uploaded ${file.name}`);
 }
 
 async function downloadFile(fileId) {
@@ -518,11 +547,7 @@ async function insertFileIntoEditor(fileId) {
   const data = await response.json();
   const file = data.file;
   const text = atob(file.base64Data);
-  const markup = file.mimeType.includes("html")
-    ? text
-    : `<h2>${escapeHtml(file.name)}</h2><pre>${escapeHtml(text)}</pre>`;
-
-  document.execCommand("insertHTML", false, markup);
+  document.execCommand("insertHTML", false, file.mimeType.includes("html") ? text : `<h2>${escapeHtml(file.name)}</h2><pre>${escapeHtml(text)}</pre>`);
   scheduleSave();
 }
 
@@ -539,25 +564,11 @@ function downloadHtml() {
 }
 
 function runEditorAction(action) {
-  if (action === "h1") {
-    document.execCommand("formatBlock", false, "<h1>");
-    return;
-  }
-  if (action === "h2") {
-    document.execCommand("formatBlock", false, "<h2>");
-    return;
-  }
-  if (action === "paragraph") {
-    document.execCommand("formatBlock", false, "<p>");
-    return;
-  }
-  if (action === "table") {
-    document.execCommand("insertHTML", false, `<table><thead><tr><th>Item</th><th>Due date</th><th>Notes</th></tr></thead><tbody><tr><td></td><td></td><td></td></tr></tbody></table><p></p>`);
-    return;
-  }
-  if (action === "signature") {
-    document.execCommand("insertHTML", false, `<p>Signature: ____________________________</p><p>Name: _________________________________</p>`);
-  }
+  if (action === "h1") return document.execCommand("formatBlock", false, "<h1>");
+  if (action === "h2") return document.execCommand("formatBlock", false, "<h2>");
+  if (action === "paragraph") return document.execCommand("formatBlock", false, "<p>");
+  if (action === "table") return document.execCommand("insertHTML", false, `<table><thead><tr><th>Item</th><th>Due date</th><th>Notes</th></tr></thead><tbody><tr><td></td><td></td><td></td></tr></tbody></table><p></p>`);
+  if (action === "signature") return document.execCommand("insertHTML", false, `<p>Signature: ____________________________</p><p>Name: _________________________________</p>`);
 }
 
 function setEditorMode(mode) {
@@ -642,17 +653,12 @@ function connectGoogleDrive() {
     openSettings();
     return;
   }
-  if (!state.google.tokenClient) {
-    initializeGoogleClients();
-  }
+  if (!state.google.tokenClient) initializeGoogleClients();
   if (!state.google.tokenClient) {
     elements.driveStatus.textContent = "Google sign-in is still loading.";
     return;
   }
-  if (state.google.accessToken) {
-    openDrivePicker();
-    return;
-  }
+  if (state.google.accessToken) return openDrivePicker();
   elements.driveStatus.textContent = "Requesting Drive access...";
   state.google.tokenClient.requestAccessToken({ prompt: "consent" });
 }
@@ -671,24 +677,18 @@ function openDrivePicker() {
     .addView(new google.picker.DocsUploadView())
     .setCallback(handleDrivePickerSelection)
     .build();
-
   picker.setVisible(true);
-  elements.driveStatus.textContent = "Drive connected.";
 }
 
 async function handleDrivePickerSelection(data) {
-  if (!window.google?.picker || data.action !== google.picker.Action.PICKED || !data.docs?.length) {
-    return;
-  }
-
+  if (!window.google?.picker || data.action !== google.picker.Action.PICKED || !data.docs?.length) return;
   const doc = data.docs[0];
+
   try {
     const response = await fetch(`https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`, {
       headers: { Authorization: `Bearer ${state.google.accessToken}` }
     });
-    if (!response.ok) {
-      throw new Error("Could not download the selected Drive file.");
-    }
+    if (!response.ok) throw new Error("Could not download the selected Drive file.");
 
     const blob = await response.blob();
     const base64Data = await blobToBase64(blob);
@@ -715,14 +715,12 @@ function updateDriveStatus() {
     elements.driveStatus.textContent = "Drive not connected. Add Google Cloud keys in Cloud settings.";
     return;
   }
-  elements.driveStatus.textContent = state.google.accessToken ? "Drive ready." : "Drive configured. Click Connect Drive.";
+  elements.driveStatus.textContent = state.google.accessToken ? "Drive ready." : "Drive already configured.";
 }
 
 function syncFileCountOnList() {
   const item = state.contracts.find(contract => contract.id === state.activeId);
-  if (item) {
-    item.fileCount = state.activeFiles.length;
-  }
+  if (item) item.fileCount = state.activeFiles.length;
   renderDocumentGallery();
 }
 
@@ -733,18 +731,20 @@ function lockEditor(disabled) {
   elements.editor.contentEditable = disabled ? "false" : "true";
 }
 
+function setView(view) {
+  state.currentView = view;
+  elements.homeView.classList.toggle("hidden", view !== "home");
+  elements.editorView.classList.toggle("hidden", view !== "editor");
+  elements.backBtn.classList.toggle("hidden", view !== "editor");
+}
+
 function setStatus(message) {
   elements.saveStatus.textContent = message;
 }
 
 function formatDate(value) {
   if (!value) return "just now";
-  return new Date(value).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
+  return new Date(value).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function formatBytes(value) {
@@ -765,21 +765,16 @@ function toListItem(contract, files = []) {
   };
 }
 
+function defaultPageHtml(title) {
+  return `<h1>${escapeHtml(title)}</h1><p>Write your contract content here.</p><p>Add terms, pricing, and signatures on this page.</p>`;
+}
+
 function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+  return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
 function slugify(value) {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
-
-function defaultPageHtml(title) {
-  return `<h1>${escapeHtml(title)}</h1><p>Write your contract content here.</p><p>Add terms, pricing, and signatures on this page.</p>`;
 }
 
 function readFileAsBase64(file) {

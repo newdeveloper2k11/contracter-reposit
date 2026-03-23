@@ -588,6 +588,15 @@ function assertContractExists(contractId) {
 }
 
 function getSetting(key, fallback) {
+  const envMap = {
+    googleDriveClientId: process.env.GOOGLE_DRIVE_CLIENT_ID,
+    googleDriveApiKey: process.env.GOOGLE_DRIVE_API_KEY,
+    googleDriveProjectNumber: process.env.GOOGLE_DRIVE_PROJECT_NUMBER,
+    storageMode: process.env.STORAGE_MODE
+  };
+  if (envMap[key]) {
+    return envMap[key];
+  }
   const row = db.prepare("SELECT encrypted_value FROM app_settings WHERE key = ?").get(key);
   if (!row) {
     return fallback;
