@@ -1,12 +1,14 @@
 const state = {
   contracts: [],
   activeId: null,
+  activeContract: null,
   activeFiles: [],
   settings: null,
   pages: [],
   activePageIndex: 0,
   editorMode: "word",
   writingMode: "editing",
+  saveTimer: null,
   google: { tokenClient: null, accessToken: null, pickerReady: false }
 };
 
@@ -16,13 +18,14 @@ const el = {
   backBtn: document.querySelector("#backBtn"),
   settingsBtn: document.querySelector("#settingsBtn"),
   newContractBtn: document.querySelector("#newContractBtn"),
-  newGoogleDocBtn: document.querySelector("#newGoogleDocBtn"),
+  importDriveBtn: document.querySelector("#importDriveBtn"),
   homeDriveBtn: document.querySelector("#homeDriveBtn"),
   homeTemplatesBtn: document.querySelector("#homeTemplatesBtn"),
   searchInput: document.querySelector("#searchInput"),
   documentGallery: document.querySelector("#documentGallery"),
   galleryCount: document.querySelector("#galleryCount"),
   duplicateBtn: document.querySelector("#duplicateBtn"),
+  generateBtn: document.querySelector("#generateBtn"),
   insertTextFileBtn: document.querySelector("#insertTextFileBtn"),
   connectDriveBtn: document.querySelector("#connectDriveBtn"),
   driveStatus: document.querySelector("#driveStatus"),
@@ -35,7 +38,6 @@ const el = {
   editingModeBtn: document.querySelector("#editingModeBtn"),
   suggestingModeBtn: document.querySelector("#suggestingModeBtn"),
   addCommentBtn: document.querySelector("#addCommentBtn"),
-  openGoogleDocBtn: document.querySelector("#openGoogleDocBtn"),
   downloadHtmlBtn: document.querySelector("#downloadHtmlBtn"),
   deleteBtn: document.querySelector("#deleteBtn"),
   addPageBtn: document.querySelector("#addPageBtn"),
@@ -56,34 +58,49 @@ const el = {
   pdfReviewLabel: document.querySelector("#pdfReviewLabel"),
   fileList: document.querySelector("#fileList"),
   fileCount: document.querySelector("#fileCount"),
+  driveImportLabel: document.querySelector("#driveImportLabel"),
   settingsDialog: document.querySelector("#settingsDialog"),
   settingsCloseBtn: document.querySelector("#settingsCloseBtn"),
   settingsForm: document.querySelector("#settingsForm"),
   googleDriveClientId: document.querySelector("#googleDriveClientId"),
   googleDriveApiKey: document.querySelector("#googleDriveApiKey"),
   googleDriveProjectNumber: document.querySelector("#googleDriveProjectNumber"),
-  storageMode: document.querySelector("#storageMode")
+  storageMode: document.querySelector("#storageMode"),
+  generateDialog: document.querySelector("#generateDialog"),
+  generateCloseBtn: document.querySelector("#generateCloseBtn"),
+  generateForm: document.querySelector("#generateForm"),
+  generateTitle: document.querySelector("#generateTitle"),
+  generateInstructions: document.querySelector("#generateInstructions"),
+  generateSource: document.querySelector("#generateSource"),
+  generateHint: document.querySelector("#generateHint")
 };
 
-document.querySelectorAll(".tools-row [data-command]").forEach(btn => btn.onclick = () => execCmd(btn.dataset.command));
-document.querySelectorAll(".tools-row [data-action]").forEach(btn => btn.onclick = () => runAction(btn.dataset.action));
+document.querySelectorAll(".tools-row [data-command]").forEach((btn) => {
+  btn.onclick = () => execCmd(btn.dataset.command);
+});
+document.querySelectorAll(".tools-row [data-action]").forEach((btn) => {
+  btn.onclick = () => runAction(btn.dataset.action);
+});
+
 el.backBtn.onclick = () => goHome();
 el.settingsBtn.onclick = () => openSettings();
 el.newContractBtn.onclick = () => createContract();
-el.newGoogleDocBtn.onclick = () => window.open("https://docs.new", "_blank", "noopener,noreferrer");
-el.homeDriveBtn.onclick = () => connectGoogleDrive();
-el.homeTemplatesBtn.onclick = () => duplicateContract();
+el.importDriveBtn.onclick = () => connectGoogleDrive("import");
+el.homeDriveBtn.onclick = () => connectGoogleDrive("import");
+el.homeTemplatesBtn.onclick = () => openGenerateDialog();
 el.searchInput.oninput = () => renderGallery();
 el.duplicateBtn.onclick = () => duplicateContract();
+el.generateBtn.onclick = () => openGenerateDialog();
 el.insertTextFileBtn.onclick = () => insertRecentText();
-el.connectDriveBtn.onclick = () => connectGoogleDrive();
-el.fileInput.onchange = e => uploadFile(e.target.files?.[0]);
+el.connectDriveBtn.onclick = () => connectGoogleDrive("import");
+el.fileInput.onchange = (event) => uploadFile(event.target.files?.[0]);
 el.settingsCloseBtn.onclick = () => el.settingsDialog.close();
-el.titleInput.oninput = scheduleSave;
-el.categoryInput.oninput = scheduleSave;
+el.generateCloseBtn.onclick = () => el.generateDialog.close();
+el.titleInput.oninput = () => scheduleSave();
+el.categoryInput.oninput = () => scheduleSave();
 el.editor.oninput = () => {
-  if (state.pages[state.activePageIndex]) state.pages[state.activePageIndex].html = el.editor.innerHTML;
-  refreshSidebars();
+  syncCurrentPageFromEditor();
+  refreshInspector();
   scheduleSave();
 };
 el.wordModeBtn.onclick = () => setEditorMode("word");
@@ -91,7 +108,6 @@ el.pdfModeBtn.onclick = () => setEditorMode("pdf");
 el.editingModeBtn.onclick = () => setWritingMode("editing");
 el.suggestingModeBtn.onclick = () => setWritingMode("suggesting");
 el.addCommentBtn.onclick = () => addComment();
-el.openGoogleDocBtn.onclick = () => window.open("https://docs.google.com/document/u/0/", "_blank", "noopener,noreferrer");
 el.downloadHtmlBtn.onclick = () => downloadHtml();
 el.deleteBtn.onclick = () => deleteContract();
 el.addPageBtn.onclick = () => addPage();
@@ -99,6 +115,7 @@ el.removePageBtn.onclick = () => removePage();
 el.prevPageBtn.onclick = () => changePage(state.activePageIndex - 1);
 el.nextPageBtn.onclick = () => changePage(state.activePageIndex + 1);
 el.settingsForm.onsubmit = saveSettings;
+el.generateForm.onsubmit = submitGenerateSimilar;
 window.onpopstate = () => loadFromRoute();
 
 boot();
@@ -108,131 +125,272 @@ async function boot() {
   initGoogle();
   setEditorMode("word");
   setWritingMode("editing");
+  setButtonsDisabled(true);
   await loadContracts();
   await loadFromRoute();
 }
 
 async function loadSettings() {
-  const r = await fetch("/api/settings");
-  const data = await r.json();
-  state.settings = data.settings;
+  const response = await fetch("/api/settings");
+  const data = await response.json();
+  state.settings = data.settings || {};
   el.googleDriveClientId.value = state.settings.googleDriveClientId || "";
   el.googleDriveApiKey.value = state.settings.googleDriveApiKey || "";
   el.googleDriveProjectNumber.value = state.settings.googleDriveProjectNumber || "";
   el.storageMode.value = state.settings.storageMode || "database";
-  updateDriveStatus();
+  updateDriveStatus("Drive not connected.");
 }
 
 async function loadContracts() {
-  const r = await fetch("/api/contracts");
-  state.contracts = (await r.json()).contracts;
+  const response = await fetch("/api/contracts");
+  const data = await response.json();
+  state.contracts = data.contracts || [];
   renderGallery();
 }
 
 async function loadFromRoute() {
   const id = new URL(window.location.href).searchParams.get("doc");
-  if (!id) return setView("home");
+  if (!id) {
+    setView("home");
+    return;
+  }
   await openContract(id, true);
 }
 
-function parseContent(content, title) {
+function parseStoredPages(content, title) {
   try {
     const parsed = JSON.parse(content);
-    if (Array.isArray(parsed.pages) && parsed.pages.length) return parsed.pages.map((p, i) => ({ id: p.id || rid(), name: p.name || `Page ${i + 1}`, html: p.html || defaultHtml(title), comments: p.comments || [] }));
+    if (Array.isArray(parsed.pages) && parsed.pages.length) {
+      return parsed.pages.map((page, index) => ({
+        id: page.id || rid(),
+        name: page.name || `Page ${index + 1}`,
+        html: page.html || defaultHtml(title),
+        comments: Array.isArray(page.comments) ? page.comments : []
+      }));
+    }
   } catch {}
   return [{ id: rid(), name: "Page 1", html: content || defaultHtml(title), comments: [] }];
 }
 
-async function openContract(id, pushRoute) {
+async function openContract(id, replaceRoute = false) {
+  const response = await fetch(`/api/contracts/${id}`);
+  if (!response.ok) return;
+  const data = await response.json();
   state.activeId = id;
-  const r = await fetch(`/api/contracts/${id}`);
-  const data = await r.json();
+  state.activeContract = data.contract;
   state.activeFiles = data.files || [];
-  state.pages = parseContent(data.contract.content, data.contract.title);
+  state.pages = parseStoredPages(data.contract.content, data.contract.title);
   state.activePageIndex = 0;
-  el.titleInput.value = data.contract.title;
-  el.categoryInput.value = data.contract.category;
-  el.editor.innerHTML = state.pages[0].html;
+  el.titleInput.value = data.contract.title || "";
+  el.categoryInput.value = data.contract.category || "";
+  el.editor.innerHTML = state.pages[0]?.html || "";
   renderGallery();
-  refreshSidebars();
   renderFiles();
-  el.duplicateBtn.disabled = false;
-  el.deleteBtn.disabled = false;
-  el.downloadHtmlBtn.disabled = false;
+  refreshInspector();
+  setButtonsDisabled(false);
   setView("editor");
-  if (pushRoute) setRoute(id);
+  setStatus(`Saved ${fmtDate(data.contract.updatedAt)}`);
+  setRoute(id, replaceRoute);
 }
 
 function renderGallery() {
-  const q = el.searchInput.value.trim().toLowerCase();
-  const docs = state.contracts.filter(c => `${c.title} ${c.category}`.toLowerCase().includes(q));
-  el.galleryCount.textContent = `${docs.length} file${docs.length === 1 ? "" : "s"}`;
-  el.documentGallery.innerHTML = docs.map(c => `
-    <article class="gallery-card compact-card ${c.id === state.activeId ? "active" : ""}">
-      <button class="card-open-area" type="button" data-id="${c.id}">
-        <div class="gallery-paper compact-paper">
-          <div class="gallery-paper-top"></div>
-          <h3>${esc(c.title)}</h3><p>${esc(c.category)}</p>
-          <div class="gallery-lines compact-lines"><span></span><span></span></div>
-        </div>
-      </button>
-      <div class="gallery-card-meta compact-meta"><span>${c.sourceContractId ? "Template copy" : "Base contract"}</span><span>${fmtDate(c.updatedAt)}</span></div>
-      <div class="gallery-card-actions">
-        <button class="ghost-btn open-doc" data-id="${c.id}" type="button">Open</button>
-        <button class="ghost-btn dup-doc" data-id="${c.id}" type="button">Duplicate</button>
-        <button class="ghost-btn edit-doc" data-id="${c.id}" type="button">Edit</button>
-      </div>
-    </article>`).join("") || `<article class="gallery-empty">No files found. Create a blank page to get started.</article>`;
-  el.documentGallery.querySelectorAll("[data-id]").forEach(btn => btn.onclick = async () => {
-    state.activeId = btn.dataset.id;
-    if (btn.classList.contains("dup-doc")) return duplicateContract();
-    await openContract(btn.dataset.id, true);
-  });
-}
+  const query = el.searchInput.value.trim().toLowerCase();
+  const contracts = state.contracts.filter((contract) =>
+    `${contract.title} ${contract.category}`.toLowerCase().includes(query)
+  );
 
-function refreshSidebars() {
-  const page = state.pages[state.activePageIndex];
-  el.pageIndicator.textContent = `Page ${state.activePageIndex + 1} of ${state.pages.length}`;
-  el.pageList.innerHTML = state.pages.map((p, i) => `<button class="page-card ${i === state.activePageIndex ? "active" : ""}" data-index="${i}"><strong>${esc(p.name)}</strong><span>${i === state.activePageIndex ? "Open now" : "Open page"}</span></button>`).join("");
-  el.pageList.querySelectorAll("[data-index]").forEach(btn => btn.onclick = () => changePage(Number(btn.dataset.index)));
-  const wrapper = document.createElement("div");
-  wrapper.innerHTML = page?.html || "";
-  const headings = [...wrapper.querySelectorAll("h1,h2,h3")];
-  el.outlineList.innerHTML = headings.length ? headings.map((h, i) => `<button class="outline-item" data-outline="${i}">${i + 1}. ${esc(h.textContent.trim() || "Untitled heading")}</button>`).join("") : `<p class="empty-note">Add headings to build the outline.</p>`;
-  el.commentsList.innerHTML = (page?.comments || []).length ? page.comments.map(c => `<article class="comment-item"><strong>${esc(c.author || "You")}</strong><p>${esc(c.text)}</p><small>${fmtDate(c.createdAt)}</small></article>`).join("") : `<p class="empty-note">No comments on this page yet.</p>`;
-  el.commentCount.textContent = String((page?.comments || []).length);
-  const words = el.editor.innerText.trim();
-  el.wordCount.textContent = `${words ? words.split(/\s+/).length : 0} words`;
+  el.galleryCount.textContent = `${contracts.length} file${contracts.length === 1 ? "" : "s"}`;
+
+  if (!contracts.length) {
+    el.documentGallery.innerHTML =
+      '<article class="gallery-empty">No contracts yet. Create one, import from Drive, or upload a file.</article>';
+    return;
+  }
+
+  el.documentGallery.innerHTML = contracts
+    .map(
+      (contract) => `
+        <article class="gallery-card compact-card ${contract.id === state.activeId ? "active" : ""}">
+          <button class="card-open-area" type="button" data-open="${contract.id}">
+            <div class="gallery-paper compact-paper">
+              <div class="gallery-paper-top"></div>
+              <h3>${esc(contract.title)}</h3>
+              <p>${esc(contract.category)}</p>
+              <div class="gallery-lines compact-lines"><span></span><span></span><span></span></div>
+            </div>
+          </button>
+          <div class="gallery-card-meta compact-meta">
+            <span>${contract.sourceContractId ? "Generated copy" : "Original"}</span>
+            <span>${fmtDate(contract.updatedAt)}</span>
+          </div>
+          <div class="gallery-card-actions">
+            <button class="ghost-btn" type="button" data-open="${contract.id}">Open</button>
+            <button class="ghost-btn" type="button" data-duplicate="${contract.id}">Duplicate</button>
+            <button class="ghost-btn" type="button" data-generate="${contract.id}">Generate similar</button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+
+  el.documentGallery.querySelectorAll("[data-open]").forEach((button) => {
+    button.onclick = async () => {
+      await openContract(button.dataset.open);
+    };
+  });
+
+  el.documentGallery.querySelectorAll("[data-duplicate]").forEach((button) => {
+    button.onclick = async () => {
+      state.activeId = button.dataset.duplicate;
+      await duplicateContract();
+    };
+  });
+
+  el.documentGallery.querySelectorAll("[data-generate]").forEach((button) => {
+    button.onclick = () => openGenerateDialog(button.dataset.generate);
+  });
 }
 
 function renderFiles() {
   el.fileCount.textContent = `${state.activeFiles.length} file${state.activeFiles.length === 1 ? "" : "s"}`;
   el.insertTextFileBtn.disabled = !state.activeFiles.some(isTextFile);
-  el.fileList.innerHTML = state.activeFiles.length ? "" : `<p class="empty-note">No attachments yet.</p>`;
-  state.activeFiles.forEach(file => {
+  el.fileList.innerHTML = "";
+
+  if (!state.activeFiles.length) {
+    el.fileList.innerHTML = '<p class="empty-note">No files attached yet. Upload or import one.</p>';
+    return;
+  }
+
+  state.activeFiles.forEach((file) => {
     const article = document.createElement("article");
     article.className = "file-item";
-    article.innerHTML = `<h3>${esc(file.name)}</h3><div class="file-meta"><span>${esc(file.mimeType)}</span><span>${fmtBytes(file.sizeBytes)}</span></div>`;
+    article.innerHTML = `
+      <h3>${esc(file.name)}</h3>
+      <div class="file-meta">
+        <span>${esc(file.mimeType)}</span>
+        <span>${fmtBytes(file.sizeBytes)}</span>
+      </div>
+    `;
+
     const actions = document.createElement("div");
     actions.className = "file-item-actions";
-    actions.innerHTML = `<button class="ghost-btn" data-kind="download">Download</button>${isTextFile(file) ? `<button class="ghost-btn" data-kind="insert">Insert</button>` : ""}${isPdf(file) ? `<button class="ghost-btn" data-kind="pdf">Review PDF</button>` : ""}`;
-    actions.querySelectorAll("[data-kind]").forEach(btn => btn.onclick = () => fileAction(file, btn.dataset.kind));
+    actions.innerHTML = `
+      <button class="ghost-btn" type="button" data-kind="download">Download</button>
+      ${isTextFile(file) ? '<button class="ghost-btn" type="button" data-kind="insert">Insert</button>' : ""}
+      ${isPdf(file) ? '<button class="ghost-btn" type="button" data-kind="pdf">Review PDF</button>' : ""}
+    `;
+
+    actions.querySelectorAll("[data-kind]").forEach((button) => {
+      button.onclick = () => fileAction(file, button.dataset.kind);
+    });
+
     article.appendChild(actions);
     el.fileList.appendChild(article);
   });
 }
 
+function refreshInspector() {
+  renderPageList();
+  renderOutline();
+  renderComments();
+  updateWordCount();
+}
+
+function renderPageList() {
+  el.pageIndicator.textContent = `Page ${state.activePageIndex + 1} of ${Math.max(state.pages.length, 1)}`;
+  el.pageList.innerHTML = state.pages
+    .map(
+      (page, index) => `
+        <button class="page-card ${index === state.activePageIndex ? "active" : ""}" type="button" data-index="${index}">
+          <strong>${esc(page.name)}</strong>
+          <span>${index === state.activePageIndex ? "Open now" : "Switch page"}</span>
+        </button>
+      `
+    )
+    .join("");
+
+  el.pageList.querySelectorAll("[data-index]").forEach((button) => {
+    button.onclick = () => changePage(Number(button.dataset.index));
+  });
+}
+
+function renderOutline() {
+  const page = state.pages[state.activePageIndex];
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = page?.html || "";
+  const headings = [...wrapper.querySelectorAll("h1, h2, h3")];
+
+  if (!headings.length) {
+    el.outlineList.innerHTML = '<p class="empty-note">Use headings to build an outline.</p>';
+    return;
+  }
+
+  el.outlineList.innerHTML = headings
+    .map(
+      (heading, index) => `
+        <button class="outline-item" type="button" data-heading="${index}">
+          ${index + 1}. ${esc(heading.textContent.trim() || "Untitled heading")}
+        </button>
+      `
+    )
+    .join("");
+
+  el.outlineList.querySelectorAll("[data-heading]").forEach((button) => {
+    button.onclick = () => {
+      el.editor.focus();
+    };
+  });
+}
+
+function renderComments() {
+  const comments = state.pages[state.activePageIndex]?.comments || [];
+  el.commentCount.textContent = String(comments.length);
+
+  if (!comments.length) {
+    el.commentsList.innerHTML = '<p class="empty-note">No comments on this page yet.</p>';
+    return;
+  }
+
+  el.commentsList.innerHTML = comments
+    .map(
+      (comment) => `
+        <article class="comment-item">
+          <strong>${esc(comment.author || "You")}</strong>
+          <p>${esc(comment.text)}</p>
+          <small>${fmtDate(comment.createdAt)}</small>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function updateWordCount() {
+  const text = el.editor.innerText.trim();
+  const total = text ? text.split(/\s+/).length : 0;
+  el.wordCount.textContent = `${total} words`;
+}
+
+function syncCurrentPageFromEditor() {
+  if (!state.pages[state.activePageIndex]) return;
+  state.pages[state.activePageIndex].html = el.editor.innerHTML;
+}
+
 function changePage(index) {
   if (index < 0 || index >= state.pages.length) return;
-  state.pages[state.activePageIndex].html = el.editor.innerHTML;
+  syncCurrentPageFromEditor();
   state.activePageIndex = index;
   el.editor.innerHTML = state.pages[index].html;
   hidePdf();
-  refreshSidebars();
+  refreshInspector();
 }
 
 function addPage() {
-  state.pages.push({ id: rid(), name: `Page ${state.pages.length + 1}`, html: defaultHtml(el.titleInput.value || "New contract"), comments: [] });
+  state.pages.push({
+    id: rid(),
+    name: `Page ${state.pages.length + 1}`,
+    html: defaultHtml(el.titleInput.value || "New contract"),
+    comments: []
+  });
   changePage(state.pages.length - 1);
   scheduleSave();
 }
@@ -240,63 +398,147 @@ function addPage() {
 function removePage() {
   if (state.pages.length <= 1) return;
   state.pages.splice(state.activePageIndex, 1);
-  changePage(Math.max(0, state.activePageIndex - 1));
+  state.activePageIndex = Math.max(0, state.activePageIndex - 1);
+  el.editor.innerHTML = state.pages[state.activePageIndex].html;
+  hidePdf();
+  refreshInspector();
   scheduleSave();
 }
 
-async function createContract() {
-  const r = await fetch("/api/contracts", {
+async function createContract(seed = {}) {
+  const title = seed.title || "New contract";
+  const category = seed.category || "General";
+  const content =
+    seed.content ||
+    JSON.stringify({
+      version: 2,
+      pages: [{ id: rid(), name: "Page 1", html: defaultHtml(title), comments: [] }]
+    });
+
+  const response = await fetch("/api/contracts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: "New contract", category: "General", content: JSON.stringify({ version: 2, pages: [{ id: rid(), name: "Page 1", html: defaultHtml("New contract"), comments: [] }] }) })
+    body: JSON.stringify({ title, category, content })
   });
-  const data = await r.json();
+  const data = await response.json();
   state.contracts.unshift(listItem(data.contract, data.files));
   renderGallery();
-  await openContract(data.contract.id, true);
+  await openContract(data.contract.id);
+  return data.contract.id;
 }
 
 async function duplicateContract() {
   if (!state.activeId) return;
-  const r = await fetch(`/api/contracts/${state.activeId}/duplicate`, { method: "POST" });
-  const data = await r.json();
+  const response = await fetch(`/api/contracts/${state.activeId}/duplicate`, { method: "POST" });
+  const data = await response.json();
   state.contracts.unshift(listItem(data.contract, data.files));
   renderGallery();
-  await openContract(data.contract.id, true);
+  await openContract(data.contract.id);
+}
+
+function openGenerateDialog(sourceId = state.activeId) {
+  const source = state.contracts.find((contract) => contract.id === sourceId);
+  el.generateSource.value = sourceId || "";
+  el.generateHint.textContent = source
+    ? `Using "${source.title}" as the starting point.`
+    : "Open or select a contract first so the new one has something to copy.";
+  el.generateTitle.value = source ? `${source.title} Copy` : "Generated contract";
+  el.generateInstructions.value = "";
+  el.generateDialog.showModal();
+}
+
+async function submitGenerateSimilar(event) {
+  event.preventDefault();
+  const sourceId = el.generateSource.value || state.activeId;
+  if (!sourceId) {
+    el.generateHint.textContent = "Pick a contract card first, then try generate similar again.";
+    return;
+  }
+
+  const sourceResponse = await fetch(`/api/contracts/${sourceId}`);
+  if (!sourceResponse.ok) return;
+  const data = await sourceResponse.json();
+  const pages = parseStoredPages(data.contract.content, data.contract.title);
+  const instructions = el.generateInstructions.value.trim();
+  const title = el.generateTitle.value.trim() || `${data.contract.title} Copy`;
+
+  const generatedPages = pages.map((page, index) => ({
+    ...page,
+    id: rid(),
+    name: index === 0 ? "Page 1" : page.name,
+    html: index === 0 ? applyGenerationInstructions(page.html, title, instructions, data.contract.title) : page.html
+  }));
+
+  const newId = await createContract({
+    title,
+    category: data.contract.category,
+    content: JSON.stringify({ version: 2, pages: generatedPages })
+  });
+
+  el.generateDialog.close();
+  await openContract(newId);
+}
+
+function applyGenerationInstructions(html, newTitle, instructions, sourceTitle) {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = html || defaultHtml(newTitle);
+  const firstHeading = wrapper.querySelector("h1");
+  if (firstHeading) firstHeading.textContent = newTitle;
+  else wrapper.prepend(htmlToNode(`<h1>${esc(newTitle)}</h1>`));
+
+  if (instructions) {
+    wrapper.prepend(
+      htmlToNode(`
+        <section class="generated-brief">
+          <p><strong>Generated from:</strong> ${esc(sourceTitle)}</p>
+          <p><strong>Requested changes:</strong> ${esc(instructions)}</p>
+        </section>
+      `)
+    );
+  }
+
+  return wrapper.innerHTML;
 }
 
 async function deleteContract() {
   if (!state.activeId || !window.confirm("Delete this contract permanently?")) return;
   await fetch(`/api/contracts/${state.activeId}`, { method: "DELETE" });
-  state.contracts = state.contracts.filter(c => c.id !== state.activeId);
+  state.contracts = state.contracts.filter((contract) => contract.id !== state.activeId);
   state.activeId = null;
-  state.pages = [];
+  state.activeContract = null;
   state.activeFiles = [];
+  state.pages = [];
   renderGallery();
   renderFiles();
+  setButtonsDisabled(true);
   goHome();
 }
 
 function scheduleSave() {
   if (!state.activeId) return;
   clearTimeout(state.saveTimer);
-  state.saveTimer = setTimeout(saveContract, 700);
+  setStatus("Saving...");
+  state.saveTimer = window.setTimeout(() => saveContract(), 700);
 }
 
 async function saveContract() {
   if (!state.activeId) return;
-  state.pages[state.activePageIndex].html = el.editor.innerHTML;
-  const r = await fetch(`/api/contracts/${state.activeId}`, {
+  syncCurrentPageFromEditor();
+  const response = await fetch(`/api/contracts/${state.activeId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: el.titleInput.value.trim() || "Untitled contract", category: el.categoryInput.value.trim() || "General", content: JSON.stringify({ version: 2, pages: state.pages }) })
+    body: JSON.stringify({
+      title: el.titleInput.value.trim() || "Untitled contract",
+      category: el.categoryInput.value.trim() || "General",
+      content: JSON.stringify({ version: 2, pages: state.pages })
+    })
   });
-  const data = await r.json();
-  const item = state.contracts.find(c => c.id === state.activeId);
-  if (item) {
-    item.title = data.contract.title;
-    item.category = data.contract.category;
-    item.updatedAt = data.contract.updatedAt;
+  const data = await response.json();
+  const current = state.contracts.find((contract) => contract.id === state.activeId);
+  if (current) {
+    current.title = data.contract.title;
+    current.category = data.contract.category;
+    current.updatedAt = data.contract.updatedAt;
   }
   renderGallery();
   setStatus(`Saved ${fmtDate(data.contract.updatedAt)}`);
@@ -305,17 +547,22 @@ async function saveContract() {
 async function uploadFile(file) {
   if (!file) return;
   if (!state.activeId) await createContract();
+
   const base64Data = await asBase64(file);
-  const r = await fetch(`/api/contracts/${state.activeId}/files`, {
+  const response = await fetch(`/api/contracts/${state.activeId}/files`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: file.name, mimeType: file.type || "application/octet-stream", base64Data })
+    body: JSON.stringify({
+      name: file.name,
+      mimeType: file.type || "application/octet-stream",
+      base64Data
+    })
   });
-  const data = await r.json();
+  const data = await response.json();
   state.activeFiles.unshift(data.file);
   renderFiles();
-  renderGallery();
-  setView("editor");
+
+  if (isTextFile(data.file)) await insertFile(data.file.id);
   if (isPdf(data.file)) await openPdf(data.file.id, data.file.name);
 }
 
@@ -329,23 +576,28 @@ async function downloadFile(fileId) {
   const file = await fetchFile(fileId);
   const blob = toBlob(file.base64Data, file.mimeType);
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = file.name;
-  a.click();
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = file.name;
+  anchor.click();
   URL.revokeObjectURL(url);
 }
 
 async function insertRecentText() {
-  const latest = state.activeFiles.find(isTextFile);
-  if (latest) await insertFile(latest.id);
+  const file = state.activeFiles.find(isTextFile);
+  if (file) await insertFile(file.id);
 }
 
 async function insertFile(fileId) {
   const file = await fetchFile(fileId);
   const text = atob(file.base64Data);
-  document.execCommand("insertHTML", false, file.mimeType.includes("html") ? text : `<h2>${esc(file.name)}</h2><pre>${esc(text)}</pre>`);
-  refreshDerivedViews();
+  document.execCommand(
+    "insertHTML",
+    false,
+    file.mimeType.includes("html") ? text : `<h2>${esc(file.name)}</h2><pre>${esc(text)}</pre>`
+  );
+  syncCurrentPageFromEditor();
+  refreshInspector();
   scheduleSave();
 }
 
@@ -355,6 +607,7 @@ async function openPdf(fileId, label) {
   el.pdfFrame.src = URL.createObjectURL(blob);
   el.pdfReviewLabel.textContent = label;
   el.pdfReviewPane.classList.remove("hidden");
+  setEditorMode("pdf");
 }
 
 function hidePdf() {
@@ -364,13 +617,15 @@ function hidePdf() {
 }
 
 function downloadHtml() {
-  state.pages[state.activePageIndex].html = el.editor.innerHTML;
-  const html = state.pages.map(p => `<section data-page="${esc(p.name)}">${p.html}</section>`).join("\n");
+  syncCurrentPageFromEditor();
+  const html = state.pages
+    .map((page) => `<section data-page="${esc(page.name)}">${page.html}</section>`)
+    .join("\n");
   const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${slug(el.titleInput.value || "contract")}.html`;
-  a.click();
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${slug(el.titleInput.value || "contract")}.html`;
+  anchor.click();
   URL.revokeObjectURL(url);
 }
 
@@ -380,14 +635,39 @@ function execCmd(command) {
 }
 
 function runAction(action) {
-  if (action === "h1") return document.execCommand("formatBlock", false, "<h1>");
-  if (action === "h2") return document.execCommand("formatBlock", false, "<h2>");
-  if (action === "paragraph") return document.execCommand("formatBlock", false, "<p>");
-  if (action === "table") return document.execCommand("insertHTML", false, `<table><thead><tr><th>Item</th><th>Due date</th><th>Notes</th></tr></thead><tbody><tr><td></td><td></td><td></td></tr></tbody></table><p></p>`);
-  if (action === "signature") return document.execCommand("insertHTML", false, `<p>Signature: ____________________________</p><p>Name: _________________________________</p>`);
-  if (action === "smartchip") return document.execCommand("insertHTML", false, `<span class="smart-chip">@Client Name</span>`);
-  if (action === "dropdownchip") return document.execCommand("insertHTML", false, `<span class="smart-chip dropdown-chip">Status: Draft</span>`);
-  if (action === "meetingnotes") return document.execCommand("insertHTML", false, `<h2>Meeting notes</h2><p><strong>Date:</strong> [Add date]</p><p><strong>Attendees:</strong> [Add names]</p><ul><li>Decision 1</li><li>Action item 1</li></ul>`);
+  if (action === "h1") document.execCommand("formatBlock", false, "<h1>");
+  if (action === "h2") document.execCommand("formatBlock", false, "<h2>");
+  if (action === "paragraph") document.execCommand("formatBlock", false, "<p>");
+  if (action === "table") {
+    document.execCommand(
+      "insertHTML",
+      false,
+      "<table><thead><tr><th>Item</th><th>Due date</th><th>Notes</th></tr></thead><tbody><tr><td></td><td></td><td></td></tr></tbody></table><p></p>"
+    );
+  }
+  if (action === "signature") {
+    document.execCommand(
+      "insertHTML",
+      false,
+      "<p>Signature: ____________________________</p><p>Name: _________________________________</p>"
+    );
+  }
+  if (action === "smartchip") {
+    document.execCommand("insertHTML", false, '<span class="smart-chip">@Client Name</span>');
+  }
+  if (action === "dropdownchip") {
+    document.execCommand("insertHTML", false, '<span class="smart-chip dropdown-chip">Status: Draft</span>');
+  }
+  if (action === "meetingnotes") {
+    document.execCommand(
+      "insertHTML",
+      false,
+      "<h2>Meeting notes</h2><p><strong>Date:</strong> [Add date]</p><p><strong>Attendees:</strong> [Add names]</p><ul><li>Decision 1</li><li>Action item 1</li></ul>"
+    );
+  }
+  syncCurrentPageFromEditor();
+  refreshInspector();
+  scheduleSave();
 }
 
 function setEditorMode(mode) {
@@ -398,7 +678,7 @@ function setEditorMode(mode) {
   el.editorShell.classList.toggle("word-mode", isWord);
   el.editorShell.classList.toggle("pdf-mode", !isWord);
   el.editor.classList.toggle("pdf-editor", !isWord);
-  el.editorModeBadge.textContent = isWord ? "Pages mode" : "Pageless mode";
+  el.editorModeBadge.textContent = isWord ? "Pages mode" : "PDF review mode";
 }
 
 function setWritingMode(mode) {
@@ -409,9 +689,15 @@ function setWritingMode(mode) {
 }
 
 function addComment() {
+  if (!state.pages[state.activePageIndex]) return;
   const text = window.prompt("Add a comment for this page:");
   if (!text) return;
-  state.pages[state.activePageIndex].comments.unshift({ id: rid(), author: "You", text, createdAt: new Date().toISOString() });
+  state.pages[state.activePageIndex].comments.unshift({
+    id: rid(),
+    author: "You",
+    text,
+    createdAt: new Date().toISOString()
+  });
   renderComments();
   scheduleSave();
 }
@@ -426,7 +712,7 @@ function openSettings() {
 
 async function saveSettings(event) {
   event.preventDefault();
-  const r = await fetch("/api/settings", {
+  const response = await fetch("/api/settings", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -436,70 +722,174 @@ async function saveSettings(event) {
       storageMode: el.storageMode.value
     })
   });
-  state.settings = (await r.json()).settings;
+  const data = await response.json();
+  state.settings = data.settings || {};
   initGoogle();
-  updateDriveStatus();
+  updateDriveStatus("Cloud settings saved.");
   el.settingsDialog.close();
 }
 
 function initGoogle() {
   state.google.tokenClient = null;
+  state.google.pickerReady = false;
+
   if (!state.settings?.googleDriveClientId) return;
+
   if (window.google?.accounts?.oauth2) {
     state.google.tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: state.settings.googleDriveClientId,
-      scope: "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly",
-      callback: resp => {
-        if (resp.error) return (el.driveStatus.textContent = `Drive authorization failed: ${resp.error}`);
-        state.google.accessToken = resp.access_token;
-        updateDriveStatus();
-        openPicker();
+      scope:
+        "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly",
+      callback: async (response) => {
+        if (response.error) {
+          updateDriveStatus(`Drive authorization failed: ${response.error}`);
+          return;
+        }
+        state.google.accessToken = response.access_token;
+        updateDriveStatus("Drive connected.");
+        await openPicker();
       }
     });
   }
-  if (window.gapi?.load) window.gapi.load("picker", () => (state.google.pickerReady = true));
+
+  if (window.gapi?.load) {
+    window.gapi.load("picker", () => {
+      state.google.pickerReady = true;
+    });
+  }
 }
 
-function connectGoogleDrive() {
-  if (!state.settings?.googleDriveClientId || !state.settings?.googleDriveApiKey || !state.settings?.googleDriveProjectNumber) return openSettings();
+function connectGoogleDrive(mode = "import") {
+  state.google.intent = mode;
+  if (
+    !state.settings?.googleDriveClientId ||
+    !state.settings?.googleDriveApiKey ||
+    !state.settings?.googleDriveProjectNumber
+  ) {
+    openSettings();
+    return;
+  }
+
   if (!state.google.tokenClient) initGoogle();
-  if (!state.google.tokenClient) return (el.driveStatus.textContent = "Google sign-in is still loading.");
-  if (state.google.accessToken) return openPicker();
-  el.driveStatus.textContent = "Requesting Drive access...";
+  if (!state.google.tokenClient) {
+    updateDriveStatus("Google sign-in is still loading.");
+    return;
+  }
+
+  if (state.google.accessToken) {
+    openPicker();
+    return;
+  }
+
+  updateDriveStatus("Requesting Drive access...");
   state.google.tokenClient.requestAccessToken({ prompt: "consent" });
 }
 
-function openPicker() {
-  if (!window.google?.picker || !state.google.accessToken || !state.google.pickerReady) return (el.driveStatus.textContent = "Google Picker is still loading.");
+async function openPicker() {
+  if (!window.google?.picker || !state.google.accessToken || !state.google.pickerReady) {
+    updateDriveStatus("Google Picker is still loading.");
+    return;
+  }
+
   const picker = new google.picker.PickerBuilder()
     .setAppId(state.settings.googleDriveProjectNumber)
     .setDeveloperKey(state.settings.googleDriveApiKey)
     .setOAuthToken(state.google.accessToken)
     .addView(new google.picker.DocsView(google.picker.ViewId.DOCS))
+    .addView(new google.picker.DocsView(google.picker.ViewId.PDFS))
     .addView(new google.picker.DocsUploadView())
-    .setCallback(async data => {
+    .setCallback(async (data) => {
       if (data.action !== google.picker.Action.PICKED || !data.docs?.length) return;
-      const doc = data.docs[0];
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`, { headers: { Authorization: `Bearer ${state.google.accessToken}` } });
-      if (!res.ok) return (el.driveStatus.textContent = "Could not download the selected Drive file.");
-      const blob = await res.blob();
-      const base64Data = await blobToBase64(blob);
-      if (!state.activeId) await createContract();
-      const upload = await fetch(`/api/contracts/${state.activeId}/files`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: doc.name, mimeType: blob.type || doc.mimeType || "application/octet-stream", base64Data })
-      });
-      const data2 = await upload.json();
-      state.activeFiles.unshift(data2.file);
-      renderFiles();
+      await importDriveFile(data.docs[0]);
     })
     .build();
+
   picker.setVisible(true);
 }
 
-function updateDriveStatus() {
-  el.driveStatus.textContent = !state.settings?.googleDriveClientId ? "Drive not connected. Add Google Cloud keys in Cloud settings." : state.google.accessToken ? "Drive ready." : "Drive already configured.";
+async function importDriveFile(doc) {
+  updateDriveStatus(`Importing ${doc.name}...`);
+  const mimeType = doc.mimeType || "";
+
+  if (mimeType === "application/vnd.google-apps.document") {
+    const response = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${doc.id}/export?mimeType=text/html`,
+      { headers: { Authorization: `Bearer ${state.google.accessToken}` } }
+    );
+    if (!response.ok) {
+      updateDriveStatus("Could not import that Google Doc.");
+      return;
+    }
+    const html = await response.text();
+    const content = JSON.stringify({
+      version: 2,
+      pages: [{ id: rid(), name: "Page 1", html: normalizeImportedHtml(html, doc.name), comments: [] }]
+    });
+    await createContract({ title: doc.name, category: "Imported from Drive", content });
+    updateDriveStatus(`Imported ${doc.name} into the website editor.`);
+    return;
+  }
+
+  const downloadResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`, {
+    headers: { Authorization: `Bearer ${state.google.accessToken}` }
+  });
+
+  if (!downloadResponse.ok) {
+    updateDriveStatus("Could not download the selected Drive file.");
+    return;
+  }
+
+  const blob = await downloadResponse.blob();
+  const base64Data = await blobToBase64(blob);
+
+  if (!state.activeId) {
+    await createContract({
+      title: doc.name.replace(/\.[^.]+$/, "") || "Imported file",
+      category: "Imported from Drive"
+    });
+  }
+
+  const uploadResponse = await fetch(`/api/contracts/${state.activeId}/files`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: doc.name,
+      mimeType: blob.type || mimeType || "application/octet-stream",
+      base64Data
+    })
+  });
+  const uploadData = await uploadResponse.json();
+  state.activeFiles.unshift(uploadData.file);
+  renderFiles();
+
+  if (isTextMime(blob.type || mimeType)) {
+    const text = await blob.text();
+    document.execCommand("insertHTML", false, `<section><h2>${esc(doc.name)}</h2><pre>${esc(text)}</pre></section>`);
+    syncCurrentPageFromEditor();
+    refreshInspector();
+    scheduleSave();
+  }
+
+  if (isPdf(uploadData.file)) {
+    await openPdf(uploadData.file.id, uploadData.file.name);
+  }
+
+  updateDriveStatus(`Imported ${doc.name}.`);
+}
+
+function normalizeImportedHtml(html, fallbackTitle) {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = html;
+  const body = wrapper.querySelector("body");
+  const content = body ? body.innerHTML : wrapper.innerHTML;
+  return content || defaultHtml(fallbackTitle);
+}
+
+function updateDriveStatus(message) {
+  el.driveStatus.textContent = message;
+  if (el.driveImportLabel) {
+    el.driveImportLabel.textContent = state.google.accessToken ? "Drive linked" : "Import from Drive";
+  }
 }
 
 function setRoute(id, replace = false) {
@@ -517,51 +907,80 @@ function goHome() {
 }
 
 async function fetchFile(fileId) {
-  const r = await fetch(`/api/contracts/${state.activeId}/files/${fileId}`);
-  return (await r.json()).file;
+  const response = await fetch(`/api/contracts/${state.activeId}/files/${fileId}`);
+  const data = await response.json();
+  return data.file;
 }
 
 function listItem(contract, files = []) {
-  return { id: contract.id, title: contract.title, category: contract.category, sourceContractId: contract.sourceContractId, updatedAt: contract.updatedAt, createdAt: contract.createdAt, fileCount: files.length };
+  return {
+    id: contract.id,
+    title: contract.title,
+    category: contract.category,
+    sourceContractId: contract.sourceContractId,
+    updatedAt: contract.updatedAt,
+    createdAt: contract.createdAt,
+    fileCount: files.length
+  };
 }
 
 function setView(view) {
   el.homeView.classList.toggle("hidden", view !== "home");
   el.editorView.classList.toggle("hidden", view !== "editor");
-  el.backBtn.classList.toggle("hidden", view !== "editor");
 }
 
-function lockEditor(disabled) {
-  el.titleInput.disabled = disabled;
-  el.categoryInput.disabled = disabled;
-  el.editor.contentEditable = disabled ? "false" : "true";
+function setButtonsDisabled(disabled) {
+  el.duplicateBtn.disabled = disabled;
+  el.generateBtn.disabled = disabled;
+  el.insertTextFileBtn.disabled = disabled;
+  el.downloadHtmlBtn.disabled = disabled;
+  el.deleteBtn.disabled = disabled;
 }
 
 function setStatus(message) {
   el.saveStatus.textContent = message;
 }
 
-function fmtDate(v) {
-  if (!v) return "just now";
-  return new Date(v).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+function fmtDate(value) {
+  if (!value) return "just now";
+  return new Date(value).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
-function fmtBytes(v) {
-  if (v < 1024) return `${v} B`;
-  if (v < 1024 * 1024) return `${(v / 1024).toFixed(1)} KB`;
-  return `${(v / (1024 * 1024)).toFixed(1)} MB`;
+function fmtBytes(value) {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function defaultHtml(title) {
-  return `<h1>${esc(title)}</h1><p>Write your contract content here.</p><p>Add terms, pricing, and signatures on this page.</p>`;
+  return `<h1>${esc(title)}</h1><p>Write your contract content here.</p><p>Add terms, pricing, signatures, and clauses on this page.</p>`;
 }
 
-function esc(v) {
-  return String(v).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+function htmlToNode(html) {
+  const template = document.createElement("template");
+  template.innerHTML = html.trim();
+  return template.content.firstElementChild;
 }
 
-function slug(v) {
-  return String(v).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+function esc(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function slug(value) {
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function rid() {
@@ -569,7 +988,11 @@ function rid() {
 }
 
 function isTextFile(file) {
-  return /text|json|xml|html|markdown/.test(file.mimeType);
+  return isTextMime(file.mimeType || "");
+}
+
+function isTextMime(mimeType) {
+  return /text|json|xml|html|markdown/.test(mimeType);
 }
 
 function isPdf(file) {
@@ -596,6 +1019,6 @@ function blobToBase64(blob) {
 
 function toBlob(base64, mimeType) {
   const binary = atob(base64);
-  const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
   return new Blob([bytes], { type: mimeType || "application/octet-stream" });
 }

@@ -26,13 +26,13 @@
               <p class="helper-copy">Open a file, create a blank draft, or duplicate a saved contract without dealing with setup every time.</p>
               <div class="quick-grid">
                 <button id="newContractBtn" class="primary-action" type="button">Blank document</button>
-                <button id="newGoogleDocBtn" class="quick-action" type="button">New Google Doc</button>
-                <button id="homeDriveBtn" class="quick-action" type="button">Open from Google Drive</button>
+                <button id="importDriveBtn" class="quick-action" type="button"><span id="driveImportLabel">Import from Drive</span></button>
+                <button id="homeDriveBtn" class="quick-action" type="button">Open Drive picker</button>
                 <label class="quick-action file-label">
                   Upload from computer
                   <input id="fileInput" type="file" hidden />
                 </label>
-                <button id="homeTemplatesBtn" class="quick-action" type="button">Duplicate selected</button>
+                <button id="homeTemplatesBtn" class="quick-action" type="button">Generate similar</button>
               </div>
             </div>
 
@@ -100,7 +100,7 @@
             </label>
             <button id="insertTextFileBtn" class="toolbar-pill" type="button" disabled>Insert file</button>
             <button id="duplicateBtn" class="toolbar-pill" type="button" disabled>Duplicate doc</button>
-            <button id="openGoogleDocBtn" class="toolbar-pill" type="button">Open in Google Docs</button>
+            <button id="generateBtn" class="toolbar-pill" type="button" disabled>Generate similar</button>
           </div>
 
           <div class="docs-toolbar-row tools-row">
@@ -238,6 +238,34 @@
         </label>
 
         <button id="saveSettingsBtn" class="primary-action" type="submit">Save settings</button>
+      </form>
+    </dialog>
+
+    <dialog id="generateDialog" class="settings-dialog">
+      <form id="generateForm" method="dialog" class="settings-form">
+        <div class="settings-header">
+          <div>
+            <p class="eyebrow">Generate similar</p>
+            <h2>Create a contract from an existing one</h2>
+          </div>
+          <button id="generateCloseBtn" class="ghost-btn" type="button">Close</button>
+        </div>
+
+        <input id="generateSource" type="hidden" />
+
+        <label>
+          <span>New contract title</span>
+          <input id="generateTitle" type="text" placeholder="Renewal agreement" />
+        </label>
+
+        <label>
+          <span>What should change?</span>
+          <textarea id="generateInstructions" rows="5" placeholder="Example: make this a one-year renewal for a new client with updated payment terms."></textarea>
+        </label>
+
+        <p id="generateHint" class="helper-copy"></p>
+
+        <button class="primary-action" type="submit">Create generated contract</button>
       </form>
     </dialog>
 

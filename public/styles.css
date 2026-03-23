@@ -25,7 +25,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -168,17 +169,29 @@ select {
   color: var(--danger);
 }
 
+.file-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .search-input,
 .docs-title-input,
 #categoryInput,
 .settings-form input,
-.settings-form select {
+.settings-form select,
+.settings-form textarea {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 11px 12px;
   background: white;
   color: var(--text);
+}
+
+.settings-form textarea {
+  resize: vertical;
+  min-height: 120px;
 }
 
 .document-gallery {
@@ -202,6 +215,12 @@ select {
 .gallery-card {
   background: white;
   padding: 12px;
+}
+
+.card-open-area {
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
 }
 
 .gallery-card.active {
@@ -473,6 +492,14 @@ select {
 .dropdown-chip {
   background: #fce8e6;
   color: #c5221f;
+}
+
+.generated-brief {
+  border: 1px solid #d2e3fc;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 14px 16px;
+  margin-bottom: 18px;
 }
 
 .docs-tabs-list,
