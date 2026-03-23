@@ -17,6 +17,7 @@ const el = {
   editorView: document.querySelector("#editorView"),
   backBtn: document.querySelector("#backBtn"),
   settingsBtn: document.querySelector("#settingsBtn"),
+  settingsBtnEditor: document.querySelector("#settingsBtnEditor"),
   newContractBtn: document.querySelector("#newContractBtn"),
   createGoogleDocBtn: document.querySelector("#createGoogleDocBtn"),
   aiGoogleDocBtn: document.querySelector("#aiGoogleDocBtn"),
@@ -83,7 +84,8 @@ const el = {
   aiDocTitle: document.querySelector("#aiDocTitle"),
   aiDocPrompt: document.querySelector("#aiDocPrompt"),
   aiDocUseCurrent: document.querySelector("#aiDocUseCurrent"),
-  aiDocHint: document.querySelector("#aiDocHint")
+  aiDocHint: document.querySelector("#aiDocHint"),
+  workspaceBannerTitle: document.querySelector("#workspaceBannerTitle")
 };
 
 document.querySelectorAll(".tools-row [data-command]").forEach((btn) => {
@@ -95,6 +97,7 @@ document.querySelectorAll(".tools-row [data-action]").forEach((btn) => {
 
 el.backBtn.onclick = () => goHome();
 el.settingsBtn.onclick = () => openSettings();
+el.settingsBtnEditor.onclick = () => openSettings();
 el.newContractBtn.onclick = () => createContract();
 el.createGoogleDocBtn.onclick = () => createGoogleDocFromCurrent();
 el.aiGoogleDocBtn.onclick = () => openAiDocDialog();
@@ -201,6 +204,9 @@ async function openContract(id, replaceRoute = false) {
   el.titleInput.value = data.contract.title || "";
   el.categoryInput.value = data.contract.category || "";
   el.editor.innerHTML = state.pages[0]?.html || "";
+  if (el.workspaceBannerTitle) {
+    el.workspaceBannerTitle.textContent = data.contract.title || "Contract Workspace";
+  }
   renderGallery();
   renderFiles();
   refreshInspector();
@@ -1023,6 +1029,9 @@ function setRoute(id, replace = false) {
 function goHome() {
   setView("home");
   setRoute("", false);
+  if (el.workspaceBannerTitle) {
+    el.workspaceBannerTitle.textContent = "Contract Workspace";
+  }
 }
 
 async function fetchFile(fileId) {

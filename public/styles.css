@@ -38,6 +38,11 @@ textarea {
   min-height: 100vh;
 }
 
+.editor-view {
+  background:
+    linear-gradient(180deg, #eef3f8 0%, #f6f8fb 24%, #eef2f6 100%);
+}
+
 .home-header,
 .docs-topbar {
   background: var(--panel);
@@ -64,6 +69,86 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.workspace-shell {
+  padding: 18px 16px 28px;
+}
+
+.workspace-header {
+  max-width: 1340px;
+  margin: 0 auto 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.workspace-brand-row,
+.workspace-banner,
+.workspace-banner-actions,
+.workspace-banner-copy {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.workspace-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid #bfd2e7;
+  background: rgba(255, 255, 255, 0.9);
+  color: #356285;
+}
+
+.workspace-pill.active {
+  background: #1a73e8;
+  border-color: #1a73e8;
+  color: white;
+}
+
+.workspace-banner {
+  max-width: 1340px;
+  margin: 0 auto 18px;
+  justify-content: space-between;
+  border-radius: 20px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #1570b9 0%, #2d8ad4 60%, #9fd2f1 100%);
+  color: white;
+  box-shadow: var(--shadow);
+}
+
+.workspace-banner-copy {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.workspace-banner-copy span {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mini-doc-frame {
+  max-width: 1340px;
+  margin: 0 auto;
+  border-radius: 22px;
+  border: 1px solid #d7e0ea;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 18px 40px rgba(70, 96, 120, 0.12);
+  overflow: hidden;
+}
+
+.mini-doc-topbar {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.compact-toolbar-wrap {
+  margin: 0 16px 16px;
+  box-shadow: none;
 }
 
 .home-hero,
@@ -394,6 +479,10 @@ textarea {
   padding: 0 18px 18px;
 }
 
+.mini-doc-layout {
+  align-items: start;
+}
+
 .docs-sidebar {
   display: flex;
   flex-direction: column;
@@ -428,6 +517,11 @@ textarea {
   border-radius: 16px;
   min-height: 900px;
   padding: 54px 20px 20px;
+}
+
+.mini-doc-shell {
+  min-height: 720px;
+  padding-top: 44px;
 }
 
 .word-mode {
@@ -465,6 +559,12 @@ textarea {
   outline: none;
   box-shadow: var(--shadow);
   line-height: 1.7;
+}
+
+.mini-doc-editor {
+  min-height: 600px;
+  max-width: 760px;
+  padding: 44px 46px;
 }
 
 .pdf-editor {
@@ -632,6 +732,12 @@ textarea {
   .home-hero,
   .docs-layout {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-header,
+  .workspace-banner {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

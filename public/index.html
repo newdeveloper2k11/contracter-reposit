@@ -63,148 +63,169 @@
       </section>
 
       <section id="editorView" class="view editor-view hidden">
-        <header class="docs-topbar">
-          <div class="docs-top-left">
-            <button id="backBtn" class="docs-icon-btn" type="button" aria-label="Back">Back</button>
-            <div class="docs-mark">Docs</div>
-            <div class="docs-title-stack">
-              <input id="titleInput" class="docs-title-input" type="text" placeholder="Untitled document" />
-              <div class="docs-meta-row">
-                <button class="meta-pill" type="button">File</button>
-                <button class="meta-pill" type="button">Edit</button>
-                <button class="meta-pill" type="button">View</button>
-                <button class="meta-pill" type="button">Insert</button>
-                <button class="meta-pill" type="button">Format</button>
-                <button class="meta-pill" type="button">Tools</button>
-                <button class="meta-pill" type="button">Extensions</button>
-                <button class="meta-pill" type="button">Help</button>
-              </div>
+        <div class="workspace-shell">
+          <header class="workspace-header">
+            <div class="workspace-brand-row">
+              <button id="backBtn" class="docs-icon-btn" type="button" aria-label="Back">Back</button>
+              <span class="workspace-pill">Workspace</span>
+              <span class="workspace-pill active">My Document</span>
             </div>
-          </div>
+            <button id="settingsBtnEditor" class="ghost-btn" type="button">Cloud settings</button>
+          </header>
 
-          <div class="docs-top-right">
-            <span id="saveStatus" class="save-status">Saved</span>
-            <button id="downloadHtmlBtn" class="ghost-btn" type="button" disabled>Download</button>
-            <button id="deleteBtn" class="danger-btn" type="button" disabled>Delete</button>
-          </div>
-        </header>
-
-        <section class="docs-toolbar-wrap">
-          <div class="docs-toolbar-row">
-            <button id="wordModeBtn" class="toolbar-pill active" type="button">Pages</button>
-            <button id="pdfModeBtn" class="toolbar-pill" type="button">Pageless</button>
-            <button id="editingModeBtn" class="toolbar-pill active" type="button">Editing</button>
-            <button id="suggestingModeBtn" class="toolbar-pill" type="button">Suggesting</button>
-            <span class="toolbar-divider"></span>
-            <label class="mini-field">
-              <span>Category</span>
-              <input id="categoryInput" type="text" placeholder="Services" />
-            </label>
-            <button id="insertTextFileBtn" class="toolbar-pill" type="button" disabled>Insert file</button>
-            <button id="duplicateBtn" class="toolbar-pill" type="button" disabled>Duplicate doc</button>
-            <button id="generateBtn" class="toolbar-pill" type="button" disabled>Generate similar</button>
-            <button id="createGoogleDocEditorBtn" class="toolbar-pill" type="button" disabled>Create Google Doc</button>
-            <button id="aiGoogleDocEditorBtn" class="toolbar-pill" type="button">AI to Google Doc</button>
-          </div>
-
-          <div class="docs-toolbar-row tools-row">
-            <button data-command="undo">Undo</button>
-            <button data-command="redo">Redo</button>
-            <button data-command="bold"><strong>B</strong></button>
-            <button data-command="italic"><em>I</em></button>
-            <button data-command="underline"><u>U</u></button>
-            <button data-command="strikeThrough"><s>S</s></button>
-            <button data-command="insertUnorderedList">Bullets</button>
-            <button data-command="insertOrderedList">Numbering</button>
-            <button data-command="justifyLeft">Left</button>
-            <button data-command="justifyCenter">Center</button>
-            <button data-command="justifyRight">Right</button>
-            <button data-action="h1">Heading</button>
-            <button data-action="h2">Subhead</button>
-            <button data-action="paragraph">Text</button>
-            <button data-action="table">Table</button>
-            <button data-action="signature">Signature</button>
-            <button data-action="smartchip">Smart chip</button>
-            <button data-action="dropdownchip">Dropdown</button>
-            <button data-action="meetingnotes">Meeting notes</button>
-            <button id="addCommentBtn" type="button">Comment</button>
-          </div>
-        </section>
-
-        <main class="docs-layout">
-          <aside class="docs-sidebar">
-            <div class="sidebar-card">
-              <div class="section-row">
-                <div>
-                  <p class="eyebrow">Outline</p>
-                  <h2>Document outline</h2>
-                </div>
-              </div>
-              <div id="outlineList" class="outline-list"></div>
+          <section class="workspace-banner">
+            <div class="workspace-banner-copy">
+              <strong id="workspaceBannerTitle">Contract Workspace</strong>
+              <span>Your website stays in control while the document opens inside this smaller workspace.</span>
             </div>
-
-            <div class="sidebar-card">
-              <div class="section-row">
-                <div>
-                  <p class="eyebrow">Tabs</p>
-                  <h2>Document pages</h2>
-                </div>
-              </div>
-              <div class="page-actions">
-                <button id="addPageBtn" class="ghost-btn" type="button">Add tab</button>
-                <button id="removePageBtn" class="ghost-btn" type="button">Remove</button>
-              </div>
-              <div id="pageList" class="page-list docs-tabs-list"></div>
-            </div>
-
-            <div class="sidebar-card">
-              <div class="section-row">
-                <div>
-                  <p class="eyebrow">Files</p>
-                  <h2>Attachments</h2>
-                </div>
-                <span id="fileCount" class="pill-tag">0</span>
-              </div>
-              <div id="fileList" class="file-list"></div>
-            </div>
-          </aside>
-
-          <section class="docs-canvas-area">
-            <div class="doc-tabs-bar">
-              <div id="pageIndicator" class="pill-tag">Page 1 of 1</div>
-              <div class="tab-nav">
-                <span id="wordCount" class="mini-status">0 words</span>
-                <button id="prevPageBtn" class="docs-icon-btn" type="button">Prev</button>
-                <button id="nextPageBtn" class="docs-icon-btn" type="button">Next</button>
-              </div>
-            </div>
-
-            <div id="editorShell" class="paper-frame word-mode docs-shell">
-              <div id="editorModeBadge" class="editor-mode-badge">Pages mode</div>
-              <div id="editor" class="editor docs-editor" contenteditable="true"></div>
-              <div id="pdfReviewPane" class="pdf-review-pane hidden">
-                <div class="pdf-review-header">
-                  <strong>PDF review mode</strong>
-                  <span id="pdfReviewLabel" class="mini-status">No PDF selected</span>
-                </div>
-                <iframe id="pdfFrame" class="pdf-frame" title="PDF review"></iframe>
-              </div>
+            <div class="workspace-banner-actions">
+              <button id="createGoogleDocEditorBtn" class="ghost-btn" type="button" disabled>Create Google Doc</button>
+              <button id="aiGoogleDocEditorBtn" class="primary-action" type="button">AI to Google Doc</button>
             </div>
           </section>
 
-          <aside class="docs-rightbar">
-            <div class="sidebar-card">
-              <div class="section-row">
-                <div>
-                  <p class="eyebrow">Comments</p>
-                  <h2>Page comments</h2>
+          <section class="mini-doc-frame">
+            <header class="docs-topbar mini-doc-topbar">
+              <div class="docs-top-left">
+                <div class="docs-mark">Docs</div>
+                <div class="docs-title-stack">
+                  <input id="titleInput" class="docs-title-input" type="text" placeholder="Untitled document" />
+                  <div class="docs-meta-row">
+                    <button class="meta-pill" type="button">File</button>
+                    <button class="meta-pill" type="button">Edit</button>
+                    <button class="meta-pill" type="button">View</button>
+                    <button class="meta-pill" type="button">Insert</button>
+                    <button class="meta-pill" type="button">Format</button>
+                    <button class="meta-pill" type="button">Tools</button>
+                    <button class="meta-pill" type="button">Extensions</button>
+                    <button class="meta-pill" type="button">Help</button>
+                  </div>
                 </div>
-                <span id="commentCount" class="pill-tag">0</span>
               </div>
-              <div id="commentsList" class="comments-list"></div>
-            </div>
-          </aside>
-        </main>
+
+              <div class="docs-top-right">
+                <span id="saveStatus" class="save-status">Saved</span>
+                <button id="downloadHtmlBtn" class="ghost-btn" type="button" disabled>Download</button>
+                <button id="deleteBtn" class="danger-btn" type="button" disabled>Delete</button>
+              </div>
+            </header>
+
+            <section class="docs-toolbar-wrap compact-toolbar-wrap">
+              <div class="docs-toolbar-row">
+                <button id="wordModeBtn" class="toolbar-pill active" type="button">Pages</button>
+                <button id="pdfModeBtn" class="toolbar-pill" type="button">Pageless</button>
+                <button id="editingModeBtn" class="toolbar-pill active" type="button">Editing</button>
+                <button id="suggestingModeBtn" class="toolbar-pill" type="button">Suggesting</button>
+                <span class="toolbar-divider"></span>
+                <label class="mini-field">
+                  <span>Category</span>
+                  <input id="categoryInput" type="text" placeholder="Services" />
+                </label>
+                <button id="insertTextFileBtn" class="toolbar-pill" type="button" disabled>Insert file</button>
+                <button id="duplicateBtn" class="toolbar-pill" type="button" disabled>Duplicate doc</button>
+                <button id="generateBtn" class="toolbar-pill" type="button" disabled>Generate similar</button>
+              </div>
+
+              <div class="docs-toolbar-row tools-row">
+                <button data-command="undo">Undo</button>
+                <button data-command="redo">Redo</button>
+                <button data-command="bold"><strong>B</strong></button>
+                <button data-command="italic"><em>I</em></button>
+                <button data-command="underline"><u>U</u></button>
+                <button data-command="strikeThrough"><s>S</s></button>
+                <button data-command="insertUnorderedList">Bullets</button>
+                <button data-command="insertOrderedList">Numbering</button>
+                <button data-command="justifyLeft">Left</button>
+                <button data-command="justifyCenter">Center</button>
+                <button data-command="justifyRight">Right</button>
+                <button data-action="h1">Heading</button>
+                <button data-action="h2">Subhead</button>
+                <button data-action="paragraph">Text</button>
+                <button data-action="table">Table</button>
+                <button data-action="signature">Signature</button>
+                <button data-action="smartchip">Smart chip</button>
+                <button data-action="dropdownchip">Dropdown</button>
+                <button data-action="meetingnotes">Meeting notes</button>
+                <button id="addCommentBtn" type="button">Comment</button>
+              </div>
+            </section>
+
+            <main class="docs-layout mini-doc-layout">
+              <aside class="docs-sidebar">
+                <div class="sidebar-card">
+                  <div class="section-row">
+                    <div>
+                      <p class="eyebrow">Outline</p>
+                      <h2>Document outline</h2>
+                    </div>
+                  </div>
+                  <div id="outlineList" class="outline-list"></div>
+                </div>
+
+                <div class="sidebar-card">
+                  <div class="section-row">
+                    <div>
+                      <p class="eyebrow">Tabs</p>
+                      <h2>Document pages</h2>
+                    </div>
+                  </div>
+                  <div class="page-actions">
+                    <button id="addPageBtn" class="ghost-btn" type="button">Add tab</button>
+                    <button id="removePageBtn" class="ghost-btn" type="button">Remove</button>
+                  </div>
+                  <div id="pageList" class="page-list docs-tabs-list"></div>
+                </div>
+
+                <div class="sidebar-card">
+                  <div class="section-row">
+                    <div>
+                      <p class="eyebrow">Files</p>
+                      <h2>Attachments</h2>
+                    </div>
+                    <span id="fileCount" class="pill-tag">0</span>
+                  </div>
+                  <div id="fileList" class="file-list"></div>
+                </div>
+              </aside>
+
+              <section class="docs-canvas-area">
+                <div class="doc-tabs-bar">
+                  <div id="pageIndicator" class="pill-tag">Page 1 of 1</div>
+                  <div class="tab-nav">
+                    <span id="wordCount" class="mini-status">0 words</span>
+                    <button id="prevPageBtn" class="docs-icon-btn" type="button">Prev</button>
+                    <button id="nextPageBtn" class="docs-icon-btn" type="button">Next</button>
+                  </div>
+                </div>
+
+                <div id="editorShell" class="paper-frame word-mode docs-shell mini-doc-shell">
+                  <div id="editorModeBadge" class="editor-mode-badge">Pages mode</div>
+                  <div id="editor" class="editor docs-editor mini-doc-editor" contenteditable="true"></div>
+                  <div id="pdfReviewPane" class="pdf-review-pane hidden">
+                    <div class="pdf-review-header">
+                      <strong>PDF review mode</strong>
+                      <span id="pdfReviewLabel" class="mini-status">No PDF selected</span>
+                    </div>
+                    <iframe id="pdfFrame" class="pdf-frame" title="PDF review"></iframe>
+                  </div>
+                </div>
+              </section>
+
+              <aside class="docs-rightbar">
+                <div class="sidebar-card">
+                  <div class="section-row">
+                    <div>
+                      <p class="eyebrow">Comments</p>
+                      <h2>Page comments</h2>
+                    </div>
+                    <span id="commentCount" class="pill-tag">0</span>
+                  </div>
+                  <div id="commentsList" class="comments-list"></div>
+                </div>
+              </aside>
+            </main>
+          </section>
+        </div>
       </section>
     </div>
 
