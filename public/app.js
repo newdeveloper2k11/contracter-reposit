@@ -9,7 +9,7 @@ const state = {
   editorMode: "word",
   writingMode: "editing",
   saveTimer: null,
-  google: { tokenClient: null, accessToken: null, pickerReady: false }
+  google: { tokenClient: null, accessToken: null, pickerReady: false, pendingAction: null }
 };
 
 const el = {
@@ -18,6 +18,8 @@ const el = {
   backBtn: document.querySelector("#backBtn"),
   settingsBtn: document.querySelector("#settingsBtn"),
   newContractBtn: document.querySelector("#newContractBtn"),
+  createGoogleDocBtn: document.querySelector("#createGoogleDocBtn"),
+  aiGoogleDocBtn: document.querySelector("#aiGoogleDocBtn"),
   importDriveBtn: document.querySelector("#importDriveBtn"),
   homeDriveBtn: document.querySelector("#homeDriveBtn"),
   homeTemplatesBtn: document.querySelector("#homeTemplatesBtn"),
@@ -40,6 +42,8 @@ const el = {
   addCommentBtn: document.querySelector("#addCommentBtn"),
   downloadHtmlBtn: document.querySelector("#downloadHtmlBtn"),
   deleteBtn: document.querySelector("#deleteBtn"),
+  createGoogleDocEditorBtn: document.querySelector("#createGoogleDocEditorBtn"),
+  aiGoogleDocEditorBtn: document.querySelector("#aiGoogleDocEditorBtn"),
   addPageBtn: document.querySelector("#addPageBtn"),
   removePageBtn: document.querySelector("#removePageBtn"),
   prevPageBtn: document.querySelector("#prevPageBtn"),
@@ -72,7 +76,14 @@ const el = {
   generateTitle: document.querySelector("#generateTitle"),
   generateInstructions: document.querySelector("#generateInstructions"),
   generateSource: document.querySelector("#generateSource"),
-  generateHint: document.querySelector("#generateHint")
+  generateHint: document.querySelector("#generateHint"),
+  aiDocDialog: document.querySelector("#aiDocDialog"),
+  aiDocCloseBtn: document.querySelector("#aiDocCloseBtn"),
+  aiDocForm: document.querySelector("#aiDocForm"),
+  aiDocTitle: document.querySelector("#aiDocTitle"),
+  aiDocPrompt: document.querySelector("#aiDocPrompt"),
+  aiDocUseCurrent: document.querySelector("#aiDocUseCurrent"),
+  aiDocHint: document.querySelector("#aiDocHint")
 };
 
 document.querySelectorAll(".tools-row [data-command]").forEach((btn) => {
@@ -85,6 +96,8 @@ document.querySelectorAll(".tools-row [data-action]").forEach((btn) => {
 el.backBtn.onclick = () => goHome();
 el.settingsBtn.onclick = () => openSettings();
 el.newContractBtn.onclick = () => createContract();
+el.createGoogleDocBtn.onclick = () => createGoogleDocFromCurrent();
+el.aiGoogleDocBtn.onclick = () => openAiDocDialog();
 el.importDriveBtn.onclick = () => connectGoogleDrive("import");
 el.homeDriveBtn.onclick = () => connectGoogleDrive("import");
 el.homeTemplatesBtn.onclick = () => openGenerateDialog();
@@ -110,12 +123,16 @@ el.suggestingModeBtn.onclick = () => setWritingMode("suggesting");
 el.addCommentBtn.onclick = () => addComment();
 el.downloadHtmlBtn.onclick = () => downloadHtml();
 el.deleteBtn.onclick = () => deleteContract();
+el.createGoogleDocEditorBtn.onclick = () => createGoogleDocFromCurrent();
+el.aiGoogleDocEditorBtn.onclick = () => openAiDocDialog();
 el.addPageBtn.onclick = () => addPage();
 el.removePageBtn.onclick = () => removePage();
 el.prevPageBtn.onclick = () => changePage(state.activePageIndex - 1);
 el.nextPageBtn.onclick = () => changePage(state.activePageIndex + 1);
 el.settingsForm.onsubmit = saveSettings;
 el.generateForm.onsubmit = submitGenerateSimilar;
+el.aiDocCloseBtn.onclick = () => el.aiDocDialog.close();
+el.aiDocForm.onsubmit = submitAiGoogleDoc;
 window.onpopstate = () => loadFromRoute();
 
 boot();
@@ -447,6 +464,14 @@ function openGenerateDialog(sourceId = state.activeId) {
   el.generateDialog.showModal();
 }
 
+function openAiDocDialog() {
+  el.aiDocTitle.value = state.activeId ? `${el.titleInput.value || "Contract"} Google Doc` : "New Google Doc";
+  el.aiDocPrompt.value = "";
+  el.aiDocUseCurrent.checked = true;
+  el.aiDocHint.textContent = "This creates a real Google Doc in the connected Google account.";
+  el.aiDocDialog.showModal();
+}
+
 async function submitGenerateSimilar(event) {
   event.preventDefault();
   const sourceId = el.generateSource.value || state.activeId;
@@ -477,6 +502,73 @@ async function submitGenerateSimilar(event) {
 
   el.generateDialog.close();
   await openContract(newId);
+}
+
+async function submitAiGoogleDoc(event) {
+  event.preventDefault();
+  await generateAiGoogleDoc();
+}
+
+async function generateAiGoogleDoc() {
+  if (!ensureGoogleDocReady(() => generateAiGoogleDoc())) return;
+  const prompt = el.aiDocPrompt.value.trim();
+  if (!prompt) {
+    el.aiDocHint.textContent = "Add a prompt for the AI first.";
+    return;
+  }
+
+  const referenceContent =
+    el.aiDocUseCurrent.checked && state.activeId
+      ? JSON.stringify({ title: el.titleInput.value, category: el.categoryInput.value, pages: state.pages })
+      : "";
+
+  el.aiDocHint.textContent = "Generating Google Doc...";
+
+  const response = await fetch("/api/google-docs/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      accessToken: state.google.accessToken,
+      title: el.aiDocTitle.value.trim() || "Generated Google Doc",
+      prompt,
+      referenceContent
+    })
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    el.aiDocHint.textContent = data.error || "Could not generate the Google Doc.";
+    return;
+  }
+
+  el.aiDocHint.innerHTML = `Created Google Doc: <a href="${escAttr(data.documentUrl)}" target="_blank" rel="noreferrer">open document</a>`;
+  window.open(data.documentUrl, "_blank", "noopener,noreferrer");
+}
+
+async function createGoogleDocFromCurrent() {
+  if (!ensureGoogleDocReady(() => createGoogleDocFromCurrent())) return;
+
+  const payload = {
+    accessToken: state.google.accessToken,
+    title: state.activeId ? `${el.titleInput.value || "Contract"} Google Doc` : "New Google Doc",
+    pages: state.activeId ? state.pages : [{ name: "Page 1", html: defaultHtml("New Google Doc") }]
+  };
+
+  updateDriveStatus("Creating Google Doc...");
+  const response = await fetch("/api/google-docs/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    updateDriveStatus(data.error || "Could not create the Google Doc.");
+    return;
+  }
+
+  updateDriveStatus(`Google Doc created: ${data.title}`);
+  window.open(data.documentUrl, "_blank", "noopener,noreferrer");
 }
 
 function applyGenerationInstructions(html, newTitle, instructions, sourceTitle) {
@@ -739,7 +831,7 @@ function initGoogle() {
     state.google.tokenClient = window.google.accounts.oauth2.initTokenClient({
       client_id: state.settings.googleDriveClientId,
       scope:
-        "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/documents",
       callback: async (response) => {
         if (response.error) {
           updateDriveStatus(`Drive authorization failed: ${response.error}`);
@@ -747,6 +839,14 @@ function initGoogle() {
         }
         state.google.accessToken = response.access_token;
         updateDriveStatus("Drive connected.");
+        if (state.google.intent === "google-doc") {
+          if (typeof state.google.pendingAction === "function") {
+            const pendingAction = state.google.pendingAction;
+            state.google.pendingAction = null;
+            pendingAction();
+          }
+          return;
+        }
         await openPicker();
       }
     });
@@ -783,6 +883,25 @@ function connectGoogleDrive(mode = "import") {
 
   updateDriveStatus("Requesting Drive access...");
   state.google.tokenClient.requestAccessToken({ prompt: "consent" });
+}
+
+function ensureGoogleDocReady(action) {
+  if (
+    !state.settings?.googleDriveClientId ||
+    !state.settings?.googleDriveApiKey ||
+    !state.settings?.googleDriveProjectNumber
+  ) {
+    openSettings();
+    return false;
+  }
+
+  if (!state.google.accessToken) {
+    state.google.pendingAction = action || null;
+    connectGoogleDrive("google-doc");
+    return false;
+  }
+
+  return true;
 }
 
 async function openPicker() {
@@ -974,6 +1093,10 @@ function esc(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function escAttr(value) {
+  return esc(value).replaceAll("`", "&#96;");
 }
 
 function slug(value) {

@@ -194,6 +194,16 @@ textarea {
   min-height: 120px;
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
 .document-gallery {
   display: grid;
   gap: 12px;

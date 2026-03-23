@@ -368,6 +368,43 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "POST" && url.pathname === "/api/google-docs/create") {
+    const body = await readJson(req);
+    const accessToken = safeLongText(body.accessToken || "");
+    const title = safeText(body.title, "New Google Doc");
+    const pages = Array.isArray(body.pages) ? body.pages : [];
+
+    if (!accessToken) {
+      badRequest("Missing Google access token.");
+    }
+
+    const documentText = pagesToPlainText(pages, title);
+    const created = await createGoogleDocument(accessToken, title, documentText);
+    sendJson(res, 201, created);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/google-docs/generate") {
+    const body = await readJson(req);
+    const accessToken = safeLongText(body.accessToken || "");
+    const title = safeText(body.title, "Generated Google Doc");
+    const prompt = safeLongText(body.prompt || "");
+    const referenceContent = typeof body.referenceContent === "string" ? body.referenceContent.slice(0, 25000) : "";
+
+    if (!accessToken) {
+      badRequest("Missing Google access token.");
+    }
+
+    if (!prompt) {
+      badRequest("Missing prompt.");
+    }
+
+    const generatedText = await generateContractText(prompt, referenceContent, title);
+    const created = await createGoogleDocument(accessToken, title, generatedText);
+    sendJson(res, 201, created);
+    return;
+  }
+
   sendNotFound("Route not found.");
 }
 
@@ -450,6 +487,13 @@ function safeText(value, fallback) {
   return trimmed ? trimmed.slice(0, 180) : fallback;
 }
 
+function safeLongText(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim().slice(0, 25000);
+}
+
 function getEncryptionKey() {
   const raw = process.env.CONTRACTS_ENCRYPTION_KEY;
 
@@ -494,6 +538,153 @@ function decryptBuffer(payload) {
     decipher.update(Buffer.from(dataText, "base64")),
     decipher.final()
   ]);
+}
+
+function pagesToPlainText(pages, fallbackTitle) {
+  if (!Array.isArray(pages) || pages.length === 0) {
+    return htmlToPlainText(defaultContractContent(fallbackTitle));
+  }
+
+  return pages
+    .map((page, index) => {
+      const pageName = safeText(page?.name || `Page ${index + 1}`, `Page ${index + 1}`);
+      const html = typeof page?.html === "string" ? page.html : "";
+      return `${pageName}\n${"=".repeat(pageName.length)}\n\n${htmlToPlainText(html)}`;
+    })
+    .join("\n\n");
+}
+
+function htmlToPlainText(html) {
+  return String(html || "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<\/(p|div|h1|h2|h3|h4|h5|h6|li|tr|section)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+async function createGoogleDocument(accessToken, title, contentText) {
+  const createResponse = await fetch("https://docs.googleapis.com/v1/documents", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ title })
+  });
+
+  if (!createResponse.ok) {
+    const message = await createResponse.text();
+    throw withStatus(new Error(`Google Docs create failed: ${message}`), 502);
+  }
+
+  const created = await createResponse.json();
+  const insertText = contentText && contentText.trim() ? contentText.trim() : "New document";
+
+  const updateResponse = await fetch(`https://docs.googleapis.com/v1/documents/${created.documentId}:batchUpdate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      requests: [
+        {
+          insertText: {
+            location: { index: 1 },
+            text: insertText
+          }
+        }
+      ]
+    })
+  });
+
+  if (!updateResponse.ok) {
+    const message = await updateResponse.text();
+    throw withStatus(new Error(`Google Docs update failed: ${message}`), 502);
+  }
+
+  return {
+    documentId: created.documentId,
+    title,
+    documentUrl: `https://docs.google.com/document/d/${created.documentId}/edit`
+  };
+}
+
+async function generateContractText(prompt, referenceContent, title) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw withStatus(new Error("OPENAI_API_KEY is not set on the server."), 400);
+  }
+
+  const model = process.env.OPENAI_MODEL || "gpt-5";
+  const input = [
+    {
+      role: "system",
+      content: [
+        {
+          type: "input_text",
+          text:
+            "Write a professional contract or agreement draft. Return plain text only, with clear headings and clauses. Do not use markdown fences."
+        }
+      ]
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text: `Title: ${title}\n\nPrompt:\n${prompt}\n\nReference content:\n${referenceContent || "None"}`
+        }
+      ]
+    }
+  ];
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      input
+    })
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw withStatus(new Error(`OpenAI generation failed: ${message}`), 502);
+  }
+
+  const data = await response.json();
+  const text =
+    data.output_text ||
+    extractTextFromResponse(data) ||
+    `${title}\n\n${prompt}`;
+
+  return String(text).trim();
+}
+
+function extractTextFromResponse(data) {
+  if (!Array.isArray(data?.output)) {
+    return "";
+  }
+
+  return data.output
+    .flatMap((item) => item.content || [])
+    .filter((item) => item.type === "output_text")
+    .map((item) => item.text || "")
+    .join("\n")
+    .trim();
 }
 
 function seedIfEmpty() {

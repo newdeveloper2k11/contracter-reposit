@@ -26,6 +26,8 @@
               <p class="helper-copy">Open a file, create a blank draft, or duplicate a saved contract without dealing with setup every time.</p>
               <div class="quick-grid">
                 <button id="newContractBtn" class="primary-action" type="button">Blank document</button>
+                <button id="createGoogleDocBtn" class="quick-action" type="button">Create Google Doc</button>
+                <button id="aiGoogleDocBtn" class="quick-action" type="button">AI Google Doc</button>
                 <button id="importDriveBtn" class="quick-action" type="button"><span id="driveImportLabel">Import from Drive</span></button>
                 <button id="homeDriveBtn" class="quick-action" type="button">Open Drive picker</button>
                 <label class="quick-action file-label">
@@ -101,6 +103,8 @@
             <button id="insertTextFileBtn" class="toolbar-pill" type="button" disabled>Insert file</button>
             <button id="duplicateBtn" class="toolbar-pill" type="button" disabled>Duplicate doc</button>
             <button id="generateBtn" class="toolbar-pill" type="button" disabled>Generate similar</button>
+            <button id="createGoogleDocEditorBtn" class="toolbar-pill" type="button" disabled>Create Google Doc</button>
+            <button id="aiGoogleDocEditorBtn" class="toolbar-pill" type="button">AI to Google Doc</button>
           </div>
 
           <div class="docs-toolbar-row tools-row">
@@ -266,6 +270,37 @@
         <p id="generateHint" class="helper-copy"></p>
 
         <button class="primary-action" type="submit">Create generated contract</button>
+      </form>
+    </dialog>
+
+    <dialog id="aiDocDialog" class="settings-dialog">
+      <form id="aiDocForm" method="dialog" class="settings-form">
+        <div class="settings-header">
+          <div>
+            <p class="eyebrow">AI Google Doc</p>
+            <h2>Generate a Google Doc from a prompt</h2>
+          </div>
+          <button id="aiDocCloseBtn" class="ghost-btn" type="button">Close</button>
+        </div>
+
+        <label>
+          <span>Google Doc title</span>
+          <input id="aiDocTitle" type="text" placeholder="Vendor services agreement" />
+        </label>
+
+        <label>
+          <span>Prompt</span>
+          <textarea id="aiDocPrompt" rows="6" placeholder="Create a contract for a freelance designer working for a startup for 6 months with milestone payments and confidentiality clauses."></textarea>
+        </label>
+
+        <label class="checkbox-row">
+          <input id="aiDocUseCurrent" type="checkbox" checked />
+          <span>Use the currently open contract as reference when available</span>
+        </label>
+
+        <p id="aiDocHint" class="helper-copy">This creates a real Google Doc in the connected Google account.</p>
+
+        <button class="primary-action" type="submit">Generate Google Doc</button>
       </form>
     </dialog>
 
