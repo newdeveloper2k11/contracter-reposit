@@ -594,10 +594,6 @@ textarea.editor {
   width: 640px !important;
 }
 
-.tox .tox-editor-header {
-  display: none !important;
-}
-
 .tox .tox-edit-area::before {
   border: none !important;
 }
