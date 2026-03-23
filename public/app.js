@@ -27,6 +27,8 @@ const el = {
   searchInput: document.querySelector("#searchInput"),
   documentGallery: document.querySelector("#documentGallery"),
   galleryCount: document.querySelector("#galleryCount"),
+  editorDocStrip: document.querySelector("#editorDocStrip"),
+  editorGalleryCount: document.querySelector("#editorGalleryCount"),
   duplicateBtn: document.querySelector("#duplicateBtn"),
   generateBtn: document.querySelector("#generateBtn"),
   insertTextFileBtn: document.querySelector("#insertTextFileBtn"),
@@ -170,6 +172,10 @@ async function loadContracts() {
 
 async function loadFromRoute() {
   const id = new URL(window.location.href).searchParams.get("doc");
+  if (!id && state.contracts.length) {
+    await openContract(state.contracts[0].id, true);
+    return;
+  }
   if (!id) {
     setView("home");
     return;
@@ -223,55 +229,70 @@ function renderGallery() {
   );
 
   el.galleryCount.textContent = `${contracts.length} file${contracts.length === 1 ? "" : "s"}`;
+  if (el.editorGalleryCount) {
+    el.editorGalleryCount.textContent = `${contracts.length} file${contracts.length === 1 ? "" : "s"}`;
+  }
 
   if (!contracts.length) {
     el.documentGallery.innerHTML =
       '<article class="gallery-empty">No contracts yet. Create one, import from Drive, or upload a file.</article>';
+    if (el.editorDocStrip) {
+      el.editorDocStrip.innerHTML = '<article class="gallery-empty">Create a contract to start working inside the workspace.</article>';
+    }
     return;
   }
 
-  el.documentGallery.innerHTML = contracts
-    .map(
-      (contract) => `
-        <article class="gallery-card compact-card ${contract.id === state.activeId ? "active" : ""}">
-          <button class="card-open-area" type="button" data-open="${contract.id}">
-            <div class="gallery-paper compact-paper">
-              <div class="gallery-paper-top"></div>
-              <h3>${esc(contract.title)}</h3>
-              <p>${esc(contract.category)}</p>
-              <div class="gallery-lines compact-lines"><span></span><span></span><span></span></div>
-            </div>
-          </button>
-          <div class="gallery-card-meta compact-meta">
-            <span>${contract.sourceContractId ? "Generated copy" : "Original"}</span>
-            <span>${fmtDate(contract.updatedAt)}</span>
-          </div>
-          <div class="gallery-card-actions">
-            <button class="ghost-btn" type="button" data-open="${contract.id}">Open</button>
-            <button class="ghost-btn" type="button" data-duplicate="${contract.id}">Duplicate</button>
-            <button class="ghost-btn" type="button" data-generate="${contract.id}">Generate similar</button>
-          </div>
-        </article>
-      `
-    )
-    .join("");
+  el.documentGallery.innerHTML = contracts.map((contract) => renderContractCard(contract, false)).join("");
+  if (el.editorDocStrip) {
+    el.editorDocStrip.innerHTML = contracts.map((contract) => renderContractCard(contract, true)).join("");
+  }
 
-  el.documentGallery.querySelectorAll("[data-open]").forEach((button) => {
+  document.querySelectorAll("[data-open]").forEach((button) => {
     button.onclick = async () => {
       await openContract(button.dataset.open);
     };
   });
 
-  el.documentGallery.querySelectorAll("[data-duplicate]").forEach((button) => {
+  document.querySelectorAll("[data-duplicate]").forEach((button) => {
     button.onclick = async () => {
       state.activeId = button.dataset.duplicate;
       await duplicateContract();
     };
   });
 
-  el.documentGallery.querySelectorAll("[data-generate]").forEach((button) => {
+  document.querySelectorAll("[data-generate]").forEach((button) => {
     button.onclick = () => openGenerateDialog(button.dataset.generate);
   });
+}
+
+function renderContractCard(contract, compact) {
+  const compactClass = compact ? "strip-card" : "compact-card";
+  const paperClass = compact ? "strip-paper" : "compact-paper";
+  const metaClass = compact ? "strip-meta" : "compact-meta";
+  const actions = compact
+    ? ""
+    : `<div class="gallery-card-actions">
+        <button class="ghost-btn" type="button" data-duplicate="${contract.id}">Duplicate</button>
+        <button class="ghost-btn" type="button" data-generate="${contract.id}">Generate similar</button>
+      </div>`;
+
+  return `
+    <article class="gallery-card ${compactClass} ${contract.id === state.activeId ? "active" : ""}">
+      <button class="card-open-area" type="button" data-open="${contract.id}">
+        <div class="gallery-paper ${paperClass}">
+          <div class="gallery-paper-top"></div>
+          <h3>${esc(contract.title)}</h3>
+          <p>${esc(contract.category)}</p>
+          <div class="gallery-lines compact-lines"><span></span><span></span><span></span></div>
+        </div>
+      </button>
+      <div class="gallery-card-meta ${metaClass}">
+        <span>${contract.sourceContractId ? "Generated copy" : "Original"}</span>
+        <span>${fmtDate(contract.updatedAt)}</span>
+      </div>
+      ${actions}
+    </article>
+  `;
 }
 
 function renderFiles() {

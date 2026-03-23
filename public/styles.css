@@ -72,16 +72,19 @@ textarea {
 }
 
 .workspace-shell {
-  padding: 18px 16px 28px;
+  padding: 8px 0 24px;
 }
 
 .workspace-header {
   max-width: 1340px;
-  margin: 0 auto 12px;
+  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid #d8dde3;
 }
 
 .workspace-brand-row,
@@ -97,12 +100,12 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  padding: 0 18px;
+  min-height: 34px;
+  padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid #bfd2e7;
-  background: rgba(255, 255, 255, 0.9);
-  color: #356285;
+  border: 1px solid #d5dce5;
+  background: white;
+  color: #4b6178;
 }
 
 .workspace-pill.active {
@@ -113,13 +116,13 @@ textarea {
 
 .workspace-banner {
   max-width: 1340px;
-  margin: 0 auto 18px;
+  margin: 14px auto 12px;
   justify-content: space-between;
-  border-radius: 20px;
-  padding: 18px 20px;
-  background: linear-gradient(135deg, #1570b9 0%, #2d8ad4 60%, #9fd2f1 100%);
+  border-radius: 0;
+  padding: 16px 20px;
+  background: linear-gradient(90deg, #1873b9 0%, #1873b9 60%, #59a3da 100%);
   color: white;
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 
 .workspace-banner-copy {
@@ -132,23 +135,38 @@ textarea {
   color: rgba(255, 255, 255, 0.9);
 }
 
+.workspace-doc-strip {
+  max-width: 1340px;
+  margin: 0 auto 12px;
+  padding: 12px 16px;
+  background: white;
+  border-top: 1px solid #dce2ea;
+  border-bottom: 1px solid #dce2ea;
+}
+
 .mini-doc-frame {
   max-width: 1340px;
   margin: 0 auto;
-  border-radius: 22px;
-  border: 1px solid #d7e0ea;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 18px 40px rgba(70, 96, 120, 0.12);
+  border-radius: 0;
+  border: 1px solid #d7dde6;
+  background: #eef2f6;
+  box-shadow: none;
   overflow: hidden;
 }
 
 .mini-doc-topbar {
-  background: rgba(255, 255, 255, 0.92);
+  background: #fff;
 }
 
 .compact-toolbar-wrap {
-  margin: 0 16px 16px;
+  margin: 0;
+  padding: 10px 16px 12px;
   box-shadow: none;
+  border: none;
+  border-top: 1px solid #e3e7ed;
+  border-bottom: 1px solid #dbe2ea;
+  border-radius: 0;
+  background: #fff;
 }
 
 .home-hero,
@@ -178,14 +196,18 @@ textarea {
 .docs-toolbar-wrap {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
+  border-radius: 12px;
+  box-shadow: none;
 }
 
 .hero-card,
 .home-card,
 .sidebar-card {
   padding: 20px;
+}
+
+.sidebar-card {
+  padding: 16px;
 }
 
 .eyebrow {
@@ -201,7 +223,7 @@ textarea {
 .home-card h2,
 .sidebar-card h2 {
   margin: 0 0 12px;
-  font-size: 1.6rem;
+  font-size: 1.1rem;
 }
 
 .helper-copy,
@@ -227,7 +249,7 @@ textarea {
 .page-card,
 .card-open-area {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
@@ -247,7 +269,7 @@ textarea {
 .toolbar-pill,
 .docs-icon-btn,
 .meta-pill {
-  padding: 12px 14px;
+  padding: 10px 14px;
 }
 
 .danger-btn {
@@ -299,6 +321,11 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 }
 
+.strip-gallery {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin-top: 12px;
+}
+
 .gallery-card,
 .gallery-empty,
 .file-item,
@@ -332,6 +359,24 @@ textarea {
 
 .compact-paper {
   min-height: 140px;
+}
+
+.strip-card {
+  padding: 8px;
+}
+
+.strip-paper {
+  min-height: 92px;
+  padding: 10px;
+}
+
+.strip-paper h3 {
+  font-size: 1rem;
+}
+
+.strip-meta {
+  margin-top: 8px;
+  font-size: 0.75rem;
 }
 
 .gallery-paper-top {
@@ -395,7 +440,7 @@ textarea {
 }
 
 .docs-topbar {
-  padding: 10px 18px;
+  padding: 12px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -416,7 +461,7 @@ textarea {
 .docs-title-input {
   border: none;
   padding: 0;
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   font-weight: 500;
 }
 
@@ -425,10 +470,10 @@ textarea {
 }
 
 .meta-pill {
-  padding: 6px 8px;
+  padding: 4px 6px;
   border: none;
   background: transparent;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .docs-toolbar-wrap {
@@ -442,7 +487,11 @@ textarea {
 }
 
 .tools-row {
-  margin-top: 10px;
+  margin-top: 8px;
+}
+
+.docs-toolbar-row button {
+  min-height: 36px;
 }
 
 .toolbar-pill.active {
@@ -474,9 +523,9 @@ textarea {
 
 .docs-layout {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr) 280px;
-  gap: 18px;
-  padding: 0 18px 18px;
+  grid-template-columns: 190px minmax(0, 1fr) 200px;
+  gap: 14px;
+  padding: 14px 16px 18px;
 }
 
 .mini-doc-layout {
@@ -514,14 +563,15 @@ textarea {
 
 .docs-shell {
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 12px;
   min-height: 900px;
   padding: 54px 20px 20px;
 }
 
 .mini-doc-shell {
-  min-height: 720px;
-  padding-top: 44px;
+  min-height: 650px;
+  padding: 42px 20px 22px;
+  background: #e8edf3;
 }
 
 .word-mode {
@@ -554,17 +604,17 @@ textarea {
   margin: 0 auto;
   background: white;
   border: 1px solid #d7dbe0;
-  border-radius: 2px;
+  border-radius: 0;
   padding: 54px 62px;
   outline: none;
-  box-shadow: var(--shadow);
+  box-shadow: 0 1px 3px rgba(78, 96, 116, 0.18);
   line-height: 1.7;
 }
 
 .mini-doc-editor {
-  min-height: 600px;
-  max-width: 760px;
-  padding: 44px 46px;
+  min-height: 520px;
+  max-width: 640px;
+  padding: 38px 42px;
 }
 
 .pdf-editor {
@@ -673,7 +723,7 @@ textarea {
 
 .page-card {
   text-align: left;
-  padding: 12px;
+  padding: 10px;
   background: white;
 }
 
@@ -695,7 +745,7 @@ textarea {
 
 .file-item {
   background: white;
-  padding: 12px;
+  padding: 10px;
 }
 
 .file-item-actions {
