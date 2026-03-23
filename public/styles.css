@@ -617,6 +617,21 @@ textarea {
   padding: 38px 42px;
 }
 
+.tox.tox-tinymce {
+  border: 1px solid #d7dbe0 !important;
+  box-shadow: 0 1px 3px rgba(78, 96, 116, 0.18);
+}
+
+.mini-doc-shell .tox.tox-tinymce {
+  max-width: 640px;
+  margin: 0 auto;
+  background: white;
+}
+
+.tox .tox-editor-header {
+  display: none !important;
+}
+
 .pdf-editor {
   max-width: 100%;
   box-shadow: none;

@@ -9,6 +9,7 @@ const state = {
   editorMode: "word",
   writingMode: "editing",
   saveTimer: null,
+  richEditor: null,
   google: { tokenClient: null, accessToken: null, pickerReady: false, pendingAction: null }
 };
 
@@ -116,11 +117,6 @@ el.settingsCloseBtn.onclick = () => el.settingsDialog.close();
 el.generateCloseBtn.onclick = () => el.generateDialog.close();
 el.titleInput.oninput = () => scheduleSave();
 el.categoryInput.oninput = () => scheduleSave();
-el.editor.oninput = () => {
-  syncCurrentPageFromEditor();
-  refreshInspector();
-  scheduleSave();
-};
 el.wordModeBtn.onclick = () => setEditorMode("word");
 el.pdfModeBtn.onclick = () => setEditorMode("pdf");
 el.editingModeBtn.onclick = () => setWritingMode("editing");
@@ -143,6 +139,7 @@ window.onpopstate = () => loadFromRoute();
 boot();
 
 async function boot() {
+  await initEditor();
   await loadSettings();
   initGoogle();
   setEditorMode("word");
@@ -150,6 +147,39 @@ async function boot() {
   setButtonsDisabled(true);
   await loadContracts();
   await loadFromRoute();
+}
+
+function initEditor() {
+  return new Promise((resolve) => {
+    if (!window.tinymce) {
+      resolve();
+      return;
+    }
+
+    window.tinymce.init({
+      target: el.editor,
+      menubar: false,
+      statusbar: false,
+      branding: false,
+      resize: false,
+      promotion: false,
+      plugins: "lists table link image autoresize",
+      toolbar: false,
+      min_height: 520,
+      setup(editor) {
+        editor.on("init", () => {
+          state.richEditor = editor;
+          setEditorHtml("");
+          resolve();
+        });
+        editor.on("input change keyup undo redo SetContent", () => {
+          syncCurrentPageFromEditor();
+          refreshInspector();
+          scheduleSave();
+        });
+      }
+    });
+  });
 }
 
 async function loadSettings() {
@@ -209,7 +239,7 @@ async function openContract(id, replaceRoute = false) {
   state.activePageIndex = 0;
   el.titleInput.value = data.contract.title || "";
   el.categoryInput.value = data.contract.category || "";
-  el.editor.innerHTML = state.pages[0]?.html || "";
+  setEditorHtml(state.pages[0]?.html || "");
   if (el.workspaceBannerTitle) {
     el.workspaceBannerTitle.textContent = data.contract.title || "Contract Workspace";
   }
@@ -381,7 +411,7 @@ function renderOutline() {
 
   el.outlineList.querySelectorAll("[data-heading]").forEach((button) => {
     button.onclick = () => {
-      el.editor.focus();
+      focusEditor();
     };
   });
 }
@@ -409,21 +439,21 @@ function renderComments() {
 }
 
 function updateWordCount() {
-  const text = el.editor.innerText.trim();
+  const text = getEditorText().trim();
   const total = text ? text.split(/\s+/).length : 0;
   el.wordCount.textContent = `${total} words`;
 }
 
 function syncCurrentPageFromEditor() {
   if (!state.pages[state.activePageIndex]) return;
-  state.pages[state.activePageIndex].html = el.editor.innerHTML;
+  state.pages[state.activePageIndex].html = getEditorHtml();
 }
 
 function changePage(index) {
   if (index < 0 || index >= state.pages.length) return;
   syncCurrentPageFromEditor();
   state.activePageIndex = index;
-  el.editor.innerHTML = state.pages[index].html;
+  setEditorHtml(state.pages[index].html);
   hidePdf();
   refreshInspector();
 }
@@ -443,7 +473,7 @@ function removePage() {
   if (state.pages.length <= 1) return;
   state.pages.splice(state.activePageIndex, 1);
   state.activePageIndex = Math.max(0, state.activePageIndex - 1);
-  el.editor.innerHTML = state.pages[state.activePageIndex].html;
+  setEditorHtml(state.pages[state.activePageIndex].html);
   hidePdf();
   refreshInspector();
   scheduleSave();
@@ -710,11 +740,7 @@ async function insertRecentText() {
 async function insertFile(fileId) {
   const file = await fetchFile(fileId);
   const text = atob(file.base64Data);
-  document.execCommand(
-    "insertHTML",
-    false,
-    file.mimeType.includes("html") ? text : `<h2>${esc(file.name)}</h2><pre>${esc(text)}</pre>`
-  );
+  insertEditorHtml(file.mimeType.includes("html") ? text : `<h2>${esc(file.name)}</h2><pre>${esc(text)}</pre>`);
   syncCurrentPageFromEditor();
   refreshInspector();
   scheduleSave();
@@ -749,40 +775,30 @@ function downloadHtml() {
 }
 
 function execCmd(command) {
-  document.execCommand(command, false, null);
-  el.editor.focus();
+  if (state.richEditor) {
+    state.richEditor.execCommand(command);
+  }
+  focusEditor();
 }
 
 function runAction(action) {
-  if (action === "h1") document.execCommand("formatBlock", false, "<h1>");
-  if (action === "h2") document.execCommand("formatBlock", false, "<h2>");
-  if (action === "paragraph") document.execCommand("formatBlock", false, "<p>");
+  if (action === "h1") applyBlockFormat("h1");
+  if (action === "h2") applyBlockFormat("h2");
+  if (action === "paragraph") applyBlockFormat("p");
   if (action === "table") {
-    document.execCommand(
-      "insertHTML",
-      false,
-      "<table><thead><tr><th>Item</th><th>Due date</th><th>Notes</th></tr></thead><tbody><tr><td></td><td></td><td></td></tr></tbody></table><p></p>"
-    );
+    insertEditorHtml("<table><thead><tr><th>Item</th><th>Due date</th><th>Notes</th></tr></thead><tbody><tr><td></td><td></td><td></td></tr></tbody></table><p></p>");
   }
   if (action === "signature") {
-    document.execCommand(
-      "insertHTML",
-      false,
-      "<p>Signature: ____________________________</p><p>Name: _________________________________</p>"
-    );
+    insertEditorHtml("<p>Signature: ____________________________</p><p>Name: _________________________________</p>");
   }
   if (action === "smartchip") {
-    document.execCommand("insertHTML", false, '<span class="smart-chip">@Client Name</span>');
+    insertEditorHtml('<span class="smart-chip">@Client Name</span>');
   }
   if (action === "dropdownchip") {
-    document.execCommand("insertHTML", false, '<span class="smart-chip dropdown-chip">Status: Draft</span>');
+    insertEditorHtml('<span class="smart-chip dropdown-chip">Status: Draft</span>');
   }
   if (action === "meetingnotes") {
-    document.execCommand(
-      "insertHTML",
-      false,
-      "<h2>Meeting notes</h2><p><strong>Date:</strong> [Add date]</p><p><strong>Attendees:</strong> [Add names]</p><ul><li>Decision 1</li><li>Action item 1</li></ul>"
-    );
+    insertEditorHtml("<h2>Meeting notes</h2><p><strong>Date:</strong> [Add date]</p><p><strong>Attendees:</strong> [Add names]</p><ul><li>Decision 1</li><li>Action item 1</li></ul>");
   }
   syncCurrentPageFromEditor();
   refreshInspector();
@@ -796,7 +812,12 @@ function setEditorMode(mode) {
   el.pdfModeBtn.classList.toggle("active", !isWord);
   el.editorShell.classList.toggle("word-mode", isWord);
   el.editorShell.classList.toggle("pdf-mode", !isWord);
-  el.editor.classList.toggle("pdf-editor", !isWord);
+  if (state.richEditor) {
+    const body = state.richEditor.getBody();
+    if (body) body.classList.toggle("pdf-editor", !isWord);
+  } else {
+    el.editor.classList.toggle("pdf-editor", !isWord);
+  }
   el.editorModeBadge.textContent = isWord ? "Pages mode" : "PDF review mode";
 }
 
@@ -804,7 +825,12 @@ function setWritingMode(mode) {
   state.writingMode = mode;
   el.editingModeBtn.classList.toggle("active", mode === "editing");
   el.suggestingModeBtn.classList.toggle("active", mode === "suggesting");
-  el.editor.classList.toggle("suggesting-editor", mode === "suggesting");
+  if (state.richEditor) {
+    const body = state.richEditor.getBody();
+    if (body) body.classList.toggle("suggesting-editor", mode === "suggesting");
+  } else {
+    el.editor.classList.toggle("suggesting-editor", mode === "suggesting");
+  }
 }
 
 function addComment() {
@@ -1010,7 +1036,7 @@ async function importDriveFile(doc) {
 
   if (isTextMime(blob.type || mimeType)) {
     const text = await blob.text();
-    document.execCommand("insertHTML", false, `<section><h2>${esc(doc.name)}</h2><pre>${esc(text)}</pre></section>`);
+    insertEditorHtml(`<section><h2>${esc(doc.name)}</h2><pre>${esc(text)}</pre></section>`);
     syncCurrentPageFromEditor();
     refreshInspector();
     scheduleSave();
@@ -1108,6 +1134,60 @@ function fmtBytes(value) {
 
 function defaultHtml(title) {
   return `<h1>${esc(title)}</h1><p>Write your contract content here.</p><p>Add terms, pricing, signatures, and clauses on this page.</p>`;
+}
+
+function getEditorHtml() {
+  if (state.richEditor) {
+    return state.richEditor.getContent() || "";
+  }
+  return el.editor.value || "";
+}
+
+function setEditorHtml(html) {
+  if (state.richEditor) {
+    state.richEditor.setContent(html || "");
+    applyEditorBodyClasses();
+    return;
+  }
+  el.editor.value = html || "";
+}
+
+function getEditorText() {
+  if (state.richEditor) {
+    return state.richEditor.getContent({ format: "text" }) || "";
+  }
+  return el.editor.value || "";
+}
+
+function focusEditor() {
+  if (state.richEditor) {
+    state.richEditor.focus();
+    return;
+  }
+  el.editor.focus();
+}
+
+function insertEditorHtml(html) {
+  if (state.richEditor) {
+    state.richEditor.insertContent(html);
+    return;
+  }
+  el.editor.value += html;
+}
+
+function applyBlockFormat(tagName) {
+  if (state.richEditor) {
+    state.richEditor.execCommand("FormatBlock", false, tagName);
+    return;
+  }
+}
+
+function applyEditorBodyClasses() {
+  if (!state.richEditor) return;
+  const body = state.richEditor.getBody();
+  if (!body) return;
+  body.classList.toggle("pdf-editor", state.editorMode !== "word");
+  body.classList.toggle("suggesting-editor", state.writingMode === "suggesting");
 }
 
 function htmlToNode(html) {
