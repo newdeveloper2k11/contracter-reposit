@@ -144,6 +144,16 @@ textarea {
   border-bottom: 1px solid #dce2ea;
 }
 
+.workspace-doc-strip .section-row {
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.workspace-doc-strip .pill-tag {
+  align-self: flex-start;
+}
+
 .mini-doc-frame {
   max-width: 1340px;
   margin: 0 auto;
