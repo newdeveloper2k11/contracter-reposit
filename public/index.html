@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contract Vault</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script async defer src="https://accounts.google.com/gsi/client"></script>
+    <script async defer src="https://apis.google.com/js/api.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <p class="eyebrow">Secure contract cloud</p>
+          <h1>Contract Vault</h1>
+          <p class="subtle">Word-like drafting, uploads, Drive import, autosave, and encrypted records.</p>
+        </div>
+
+        <div class="sidebar-actions">
+          <button id="newContractBtn" class="primary-btn">New contract</button>
+          <button id="duplicateBtn" class="secondary-btn" disabled>Generate from selected</button>
+          <button id="settingsBtn" class="secondary-btn">Cloud settings</button>
+        </div>
+
+        <label class="search">
+          <span>Find files</span>
+          <input id="searchInput" type="search" placeholder="Search by contract name or category" />
+        </label>
+
+        <div id="contractList" class="contract-list"></div>
+      </aside>
+
+      <main class="workspace">
+        <header class="workspace-topbar">
+          <div class="title-column">
+            <p class="eyebrow">Document</p>
+            <input id="titleInput" class="title-input" type="text" value="" placeholder="Contract title" />
+            <div class="inline-meta">
+              <label>
+                <span>Category</span>
+                <input id="categoryInput" type="text" placeholder="Services" />
+              </label>
+              <span id="saveStatus" class="save-status">Loading...</span>
+            </div>
+          </div>
+
+          <div class="topbar-actions">
+            <button id="downloadHtmlBtn" class="secondary-btn" disabled>Download HTML</button>
+            <button id="deleteBtn" class="danger-btn" disabled>Delete</button>
+          </div>
+        </header>
+
+        <section class="toolbar">
+          <button data-command="undo">Undo</button>
+          <button data-command="redo">Redo</button>
+          <button data-command="bold"><strong>B</strong></button>
+          <button data-command="italic"><em>I</em></button>
+          <button data-command="underline"><u>U</u></button>
+          <button data-command="strikeThrough"><s>S</s></button>
+          <button data-command="insertUnorderedList">Bullets</button>
+          <button data-command="insertOrderedList">Numbering</button>
+          <button data-command="outdent">Outdent</button>
+          <button data-command="indent">Indent</button>
+          <button data-command="justifyLeft">Left</button>
+          <button data-command="justifyCenter">Center</button>
+          <button data-command="justifyRight">Right</button>
+          <button data-command="removeFormat">Clear</button>
+          <button data-action="h1">Heading</button>
+          <button data-action="h2">Subhead</button>
+          <button data-action="paragraph">Paragraph</button>
+          <button data-action="table">Table</button>
+          <button data-action="signature">Signature line</button>
+        </section>
+
+        <section class="document-grid">
+          <section class="editor-card">
+            <div class="paper-frame">
+              <div id="editor" class="editor" contenteditable="true"></div>
+            </div>
+          </section>
+
+          <aside class="assets-panel">
+            <div class="assets-header">
+              <div>
+                <p class="eyebrow">Files</p>
+                <h2>Attachments & imports</h2>
+              </div>
+              <span id="fileCount" class="panel-tag">0 files</span>
+            </div>
+
+            <div class="assets-actions">
+              <label class="upload-btn">
+                Upload file
+                <input id="fileInput" type="file" hidden />
+              </label>
+              <button id="insertTextFileBtn" class="secondary-btn" disabled>Insert text file</button>
+              <button id="connectDriveBtn" class="secondary-btn">Connect Drive</button>
+            </div>
+
+            <div id="driveStatus" class="drive-status">Drive not connected.</div>
+            <div id="fileList" class="file-list"></div>
+          </aside>
+        </section>
+
+        <section class="details-grid">
+          <article class="info-card">
+            <p class="eyebrow">Storage</p>
+            <h2>Database-first, cloud-ready</h2>
+            <p>Your contracts and uploaded files are encrypted before being stored. Deploy this app to a cloud host and the database becomes online storage instead of device-only storage.</p>
+          </article>
+          <article class="info-card">
+            <p class="eyebrow">Drive</p>
+            <h2>Google Drive handoff</h2>
+            <p>Use Google Picker to select or upload files from Drive after entering your Google Cloud client ID, API key, and project number in Cloud settings.</p>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="settingsDialog" class="settings-dialog">
+      <form id="settingsForm" method="dialog" class="settings-form">
+        <div class="settings-header">
+          <div>
+            <p class="eyebrow">Cloud settings</p>
+            <h2>Google Drive and storage</h2>
+          </div>
+          <button value="cancel" class="secondary-btn">Close</button>
+        </div>
+
+        <label>
+          <span>Google client ID</span>
+          <input id="googleDriveClientId" type="text" placeholder="1234567890-xxxxx.apps.googleusercontent.com" />
+        </label>
+
+        <label>
+          <span>Google API key</span>
+          <input id="googleDriveApiKey" type="text" placeholder="AIza..." />
+        </label>
+
+        <label>
+          <span>Google project number</span>
+          <input id="googleDriveProjectNumber" type="text" placeholder="123456789012" />
+        </label>
+
+        <label>
+          <span>Storage mode</span>
+          <select id="storageMode">
+            <option value="database">Encrypted database</option>
+            <option value="database+drive">Encrypted database + Drive import</option>
+          </select>
+        </label>
+
+        <button id="saveSettingsBtn" value="default" class="primary-btn">Save settings</button>
+      </form>
+    </dialog>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
