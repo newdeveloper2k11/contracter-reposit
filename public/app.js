@@ -569,6 +569,9 @@ function runEditorAction(action) {
   if (action === "paragraph") return document.execCommand("formatBlock", false, "<p>");
   if (action === "table") return document.execCommand("insertHTML", false, `<table><thead><tr><th>Item</th><th>Due date</th><th>Notes</th></tr></thead><tbody><tr><td></td><td></td><td></td></tr></tbody></table><p></p>`);
   if (action === "signature") return document.execCommand("insertHTML", false, `<p>Signature: ____________________________</p><p>Name: _________________________________</p>`);
+  if (action === "smartchip") return document.execCommand("insertHTML", false, `<span class="smart-chip">@Client Name</span>`);
+  if (action === "dropdownchip") return document.execCommand("insertHTML", false, `<span class="smart-chip dropdown-chip">Status: Draft</span>`);
+  if (action === "meetingnotes") return document.execCommand("insertHTML", false, `<h2>Meeting notes</h2><p><strong>Date:</strong> [Add date]</p><p><strong>Attendees:</strong> [Add names]</p><ul><li>Decision 1</li><li>Action item 1</li></ul>`);
 }
 
 function setEditorMode(mode) {
@@ -579,7 +582,7 @@ function setEditorMode(mode) {
   elements.editorShell.classList.toggle("word-mode", isWord);
   elements.editorShell.classList.toggle("pdf-mode", !isWord);
   elements.editor.classList.toggle("pdf-editor", !isWord);
-  elements.editorModeBadge.textContent = isWord ? "Word mode" : "PDF mode";
+  elements.editorModeBadge.textContent = isWord ? "Pages mode" : "Pageless mode";
 }
 
 function openSettings() {
