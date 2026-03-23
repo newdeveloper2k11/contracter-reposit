@@ -10,6 +10,7 @@ const state = {
   writingMode: "editing",
   saveTimer: null,
   richEditor: null,
+  editorReady: false,
   google: { tokenClient: null, accessToken: null, pickerReady: false, pendingAction: null }
 };
 
@@ -153,6 +154,7 @@ async function boot() {
 function initEditor() {
   return new Promise((resolve) => {
     if (!window.tinymce) {
+      el.editor.classList.add("editor-fallback");
       resolve();
       return;
     }
@@ -170,6 +172,9 @@ function initEditor() {
       setup(editor) {
         editor.on("init", () => {
           state.richEditor = editor;
+          state.editorReady = true;
+          el.editor.classList.remove("editor-fallback");
+          el.editor.classList.add("editor-host-ready");
           setEditorHtml("");
           resolve();
         });

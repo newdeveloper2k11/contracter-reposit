@@ -611,6 +611,23 @@ textarea {
   line-height: 1.7;
 }
 
+textarea.editor {
+  width: 100%;
+  resize: none;
+}
+
+.editor-host-ready {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.editor-fallback {
+  display: block;
+}
+
 .mini-doc-editor {
   min-height: 520px;
   max-width: 640px;
@@ -626,10 +643,24 @@ textarea {
   max-width: 640px;
   margin: 0 auto;
   background: white;
+  width: 640px !important;
 }
 
 .tox .tox-editor-header {
   display: none !important;
+}
+
+.tox .tox-edit-area::before {
+  border: none !important;
+}
+
+.tox .tox-edit-area iframe {
+  background: white;
+}
+
+.tox .tox-edit-area__iframe,
+.tox .tox-sidebar-wrap {
+  min-height: 520px !important;
 }
 
 .pdf-editor {
