@@ -1,16 +1,12 @@
 const state = {
   contracts: [],
   activeId: null,
-  activeContract: null,
   activeFiles: [],
   settings: null,
   pages: [],
   activePageIndex: 0,
-  editorMode: "word",
-  writingMode: "editing",
   saveTimer: null,
   richEditor: null,
-  editorReady: false,
   google: { tokenClient: null, accessToken: null, pickerReady: false, pendingAction: null }
 };
 
@@ -40,11 +36,6 @@ const el = {
   titleInput: document.querySelector("#titleInput"),
   categoryInput: document.querySelector("#categoryInput"),
   saveStatus: document.querySelector("#saveStatus"),
-  wordModeBtn: document.querySelector("#wordModeBtn"),
-  pdfModeBtn: document.querySelector("#pdfModeBtn"),
-  editingModeBtn: document.querySelector("#editingModeBtn"),
-  suggestingModeBtn: document.querySelector("#suggestingModeBtn"),
-  addCommentBtn: document.querySelector("#addCommentBtn"),
   downloadHtmlBtn: document.querySelector("#downloadHtmlBtn"),
   deleteBtn: document.querySelector("#deleteBtn"),
   createGoogleDocEditorBtn: document.querySelector("#createGoogleDocEditorBtn"),
@@ -55,12 +46,7 @@ const el = {
   nextPageBtn: document.querySelector("#nextPageBtn"),
   pageIndicator: document.querySelector("#pageIndicator"),
   pageList: document.querySelector("#pageList"),
-  outlineList: document.querySelector("#outlineList"),
   wordCount: document.querySelector("#wordCount"),
-  commentCount: document.querySelector("#commentCount"),
-  commentsList: document.querySelector("#commentsList"),
-  editorShell: document.querySelector("#editorShell"),
-  editorModeBadge: document.querySelector("#editorModeBadge"),
   editor: document.querySelector("#editor"),
   pdfReviewPane: document.querySelector("#pdfReviewPane"),
   pdfFrame: document.querySelector("#pdfFrame"),
@@ -92,13 +78,6 @@ const el = {
   workspaceBannerTitle: document.querySelector("#workspaceBannerTitle")
 };
 
-document.querySelectorAll(".tools-row [data-command]").forEach((btn) => {
-  btn.onclick = () => execCmd(btn.dataset.command);
-});
-document.querySelectorAll(".tools-row [data-action]").forEach((btn) => {
-  btn.onclick = () => runAction(btn.dataset.action);
-});
-
 el.backBtn.onclick = () => goHome();
 el.settingsBtn.onclick = () => openSettings();
 el.settingsBtnEditor.onclick = () => openSettings();
@@ -116,13 +95,9 @@ el.connectDriveBtn.onclick = () => connectGoogleDrive("import");
 el.fileInput.onchange = (event) => uploadFile(event.target.files?.[0]);
 el.settingsCloseBtn.onclick = () => el.settingsDialog.close();
 el.generateCloseBtn.onclick = () => el.generateDialog.close();
+el.aiDocCloseBtn.onclick = () => el.aiDocDialog.close();
 el.titleInput.oninput = () => scheduleSave();
 el.categoryInput.oninput = () => scheduleSave();
-el.wordModeBtn.onclick = () => setEditorMode("word");
-el.pdfModeBtn.onclick = () => setEditorMode("pdf");
-el.editingModeBtn.onclick = () => setWritingMode("editing");
-el.suggestingModeBtn.onclick = () => setWritingMode("suggesting");
-el.addCommentBtn.onclick = () => addComment();
 el.downloadHtmlBtn.onclick = () => downloadHtml();
 el.deleteBtn.onclick = () => deleteContract();
 el.createGoogleDocEditorBtn.onclick = () => createGoogleDocFromCurrent();
@@ -133,7 +108,6 @@ el.prevPageBtn.onclick = () => changePage(state.activePageIndex - 1);
 el.nextPageBtn.onclick = () => changePage(state.activePageIndex + 1);
 el.settingsForm.onsubmit = saveSettings;
 el.generateForm.onsubmit = submitGenerateSimilar;
-el.aiDocCloseBtn.onclick = () => el.aiDocDialog.close();
 el.aiDocForm.onsubmit = submitAiGoogleDoc;
 window.onpopstate = () => loadFromRoute();
 
@@ -144,59 +118,9 @@ async function boot() {
   await loadTinyMce();
   await initEditor();
   initGoogle();
-  setEditorMode("word");
-  setWritingMode("editing");
   setButtonsDisabled(true);
   await loadContracts();
   await loadFromRoute();
-}
-
-function initEditor() {
-  return new Promise((resolve) => {
-    if (!window.tinymce) {
-      el.editor.classList.add("editor-fallback");
-      resolve();
-      return;
-    }
-
-    window.tinymce.init({
-      target: el.editor,
-      menubar: false,
-      statusbar: false,
-      branding: false,
-      resize: false,
-      promotion: false,
-      plugins: "lists table link image autoresize",
-      toolbar: false,
-      min_height: 520,
-      setup(editor) {
-        editor.on("init", () => {
-          state.richEditor = editor;
-          state.editorReady = true;
-          el.editor.classList.remove("editor-fallback");
-          el.editor.classList.add("editor-host-ready");
-          setEditorHtml("");
-          resolve();
-        });
-        editor.on("input change keyup undo redo SetContent", () => {
-          syncCurrentPageFromEditor();
-          refreshInspector();
-          scheduleSave();
-        });
-      }
-    });
-  });
-}
-
-async function loadSettings() {
-  const response = await fetch("/api/settings");
-  const data = await response.json();
-  state.settings = data.settings || {};
-  el.googleDriveClientId.value = state.settings.googleDriveClientId || "";
-  el.googleDriveApiKey.value = state.settings.googleDriveApiKey || "";
-  el.googleDriveProjectNumber.value = state.settings.googleDriveProjectNumber || "";
-  el.storageMode.value = state.settings.storageMode || "database";
-  updateDriveStatus("Drive not connected.");
 }
 
 function loadTinyMce() {
@@ -223,6 +147,51 @@ function loadTinyMce() {
     script.onerror = () => reject(new Error("TinyMCE failed to load."));
     document.head.appendChild(script);
   });
+}
+
+function initEditor() {
+  return new Promise((resolve) => {
+    if (!window.tinymce) {
+      resolve();
+      return;
+    }
+
+    window.tinymce.init({
+      target: el.editor,
+      menubar: "file edit view insert format tools table help",
+      statusbar: false,
+      branding: false,
+      promotion: false,
+      resize: false,
+      plugins: "lists link image table autoresize code wordcount",
+      toolbar:
+        "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | alignleft aligncenter alignright | bullist numlist outdent indent | table link image | removeformat code",
+      min_height: 560,
+      setup(editor) {
+        editor.on("init", () => {
+          state.richEditor = editor;
+          setEditorHtml("");
+          resolve();
+        });
+        editor.on("input change keyup undo redo SetContent", () => {
+          syncCurrentPageFromEditor();
+          updateWordCount();
+          scheduleSave();
+        });
+      }
+    });
+  });
+}
+
+async function loadSettings() {
+  const response = await fetch("/api/settings");
+  const data = await response.json();
+  state.settings = data.settings || {};
+  el.googleDriveClientId.value = state.settings.googleDriveClientId || "";
+  el.googleDriveApiKey.value = state.settings.googleDriveApiKey || "";
+  el.googleDriveProjectNumber.value = state.settings.googleDriveProjectNumber || "";
+  el.storageMode.value = state.settings.storageMode || "database";
+  updateDriveStatus("Drive not connected.");
 }
 
 async function loadContracts() {
@@ -265,19 +234,17 @@ async function openContract(id, replaceRoute = false) {
   if (!response.ok) return;
   const data = await response.json();
   state.activeId = id;
-  state.activeContract = data.contract;
   state.activeFiles = data.files || [];
   state.pages = parseStoredPages(data.contract.content, data.contract.title);
   state.activePageIndex = 0;
   el.titleInput.value = data.contract.title || "";
   el.categoryInput.value = data.contract.category || "";
   setEditorHtml(state.pages[0]?.html || "");
-  if (el.workspaceBannerTitle) {
-    el.workspaceBannerTitle.textContent = data.contract.title || "Contract Workspace";
-  }
+  el.workspaceBannerTitle.textContent = data.contract.title || "Contract Workspace";
   renderGallery();
   renderFiles();
-  refreshInspector();
+  renderPageList();
+  updateWordCount();
   setButtonsDisabled(false);
   setView("editor");
   setStatus(`Saved ${fmtDate(data.contract.updatedAt)}`);
@@ -291,23 +258,18 @@ function renderGallery() {
   );
 
   el.galleryCount.textContent = `${contracts.length} file${contracts.length === 1 ? "" : "s"}`;
-  if (el.editorGalleryCount) {
-    el.editorGalleryCount.textContent = `${contracts.length} file${contracts.length === 1 ? "" : "s"}`;
-  }
+  el.editorGalleryCount.textContent = `${contracts.length} file${contracts.length === 1 ? "" : "s"}`;
 
   if (!contracts.length) {
     el.documentGallery.innerHTML =
       '<article class="gallery-empty">No contracts yet. Create one, import from Drive, or upload a file.</article>';
-    if (el.editorDocStrip) {
-      el.editorDocStrip.innerHTML = '<article class="gallery-empty">Create a contract to start working inside the workspace.</article>';
-    }
+    el.editorDocStrip.innerHTML =
+      '<article class="gallery-empty">Create a contract to start working inside the workspace.</article>';
     return;
   }
 
   el.documentGallery.innerHTML = contracts.map((contract) => renderContractCard(contract, false)).join("");
-  if (el.editorDocStrip) {
-    el.editorDocStrip.innerHTML = contracts.map((contract) => renderContractCard(contract, true)).join("");
-  }
+  el.editorDocStrip.innerHTML = contracts.map((contract) => renderContractCard(contract, true)).join("");
 
   document.querySelectorAll("[data-open]").forEach((button) => {
     button.onclick = async () => {
@@ -357,51 +319,6 @@ function renderContractCard(contract, compact) {
   `;
 }
 
-function renderFiles() {
-  el.fileCount.textContent = `${state.activeFiles.length} file${state.activeFiles.length === 1 ? "" : "s"}`;
-  el.insertTextFileBtn.disabled = !state.activeFiles.some(isTextFile);
-  el.fileList.innerHTML = "";
-
-  if (!state.activeFiles.length) {
-    el.fileList.innerHTML = '<p class="empty-note">No files attached yet. Upload or import one.</p>';
-    return;
-  }
-
-  state.activeFiles.forEach((file) => {
-    const article = document.createElement("article");
-    article.className = "file-item";
-    article.innerHTML = `
-      <h3>${esc(file.name)}</h3>
-      <div class="file-meta">
-        <span>${esc(file.mimeType)}</span>
-        <span>${fmtBytes(file.sizeBytes)}</span>
-      </div>
-    `;
-
-    const actions = document.createElement("div");
-    actions.className = "file-item-actions";
-    actions.innerHTML = `
-      <button class="ghost-btn" type="button" data-kind="download">Download</button>
-      ${isTextFile(file) ? '<button class="ghost-btn" type="button" data-kind="insert">Insert</button>' : ""}
-      ${isPdf(file) ? '<button class="ghost-btn" type="button" data-kind="pdf">Review PDF</button>' : ""}
-    `;
-
-    actions.querySelectorAll("[data-kind]").forEach((button) => {
-      button.onclick = () => fileAction(file, button.dataset.kind);
-    });
-
-    article.appendChild(actions);
-    el.fileList.appendChild(article);
-  });
-}
-
-function refreshInspector() {
-  renderPageList();
-  renderOutline();
-  renderComments();
-  updateWordCount();
-}
-
 function renderPageList() {
   el.pageIndicator.textContent = `Page ${state.activePageIndex + 1} of ${Math.max(state.pages.length, 1)}`;
   el.pageList.innerHTML = state.pages
@@ -418,56 +335,6 @@ function renderPageList() {
   el.pageList.querySelectorAll("[data-index]").forEach((button) => {
     button.onclick = () => changePage(Number(button.dataset.index));
   });
-}
-
-function renderOutline() {
-  const page = state.pages[state.activePageIndex];
-  const wrapper = document.createElement("div");
-  wrapper.innerHTML = page?.html || "";
-  const headings = [...wrapper.querySelectorAll("h1, h2, h3")];
-
-  if (!headings.length) {
-    el.outlineList.innerHTML = '<p class="empty-note">Use headings to build an outline.</p>';
-    return;
-  }
-
-  el.outlineList.innerHTML = headings
-    .map(
-      (heading, index) => `
-        <button class="outline-item" type="button" data-heading="${index}">
-          ${index + 1}. ${esc(heading.textContent.trim() || "Untitled heading")}
-        </button>
-      `
-    )
-    .join("");
-
-  el.outlineList.querySelectorAll("[data-heading]").forEach((button) => {
-    button.onclick = () => {
-      focusEditor();
-    };
-  });
-}
-
-function renderComments() {
-  const comments = state.pages[state.activePageIndex]?.comments || [];
-  el.commentCount.textContent = String(comments.length);
-
-  if (!comments.length) {
-    el.commentsList.innerHTML = '<p class="empty-note">No comments on this page yet.</p>';
-    return;
-  }
-
-  el.commentsList.innerHTML = comments
-    .map(
-      (comment) => `
-        <article class="comment-item">
-          <strong>${esc(comment.author || "You")}</strong>
-          <p>${esc(comment.text)}</p>
-          <small>${fmtDate(comment.createdAt)}</small>
-        </article>
-      `
-    )
-    .join("");
 }
 
 function updateWordCount() {
@@ -487,7 +354,8 @@ function changePage(index) {
   state.activePageIndex = index;
   setEditorHtml(state.pages[index].html);
   hidePdf();
-  refreshInspector();
+  renderPageList();
+  updateWordCount();
 }
 
 function addPage() {
@@ -507,7 +375,8 @@ function removePage() {
   state.activePageIndex = Math.max(0, state.activePageIndex - 1);
   setEditorHtml(state.pages[state.activePageIndex].html);
   hidePdf();
-  refreshInspector();
+  renderPageList();
+  updateWordCount();
   scheduleSave();
 }
 
@@ -553,19 +422,11 @@ function openGenerateDialog(sourceId = state.activeId) {
   el.generateDialog.showModal();
 }
 
-function openAiDocDialog() {
-  el.aiDocTitle.value = state.activeId ? `${el.titleInput.value || "Contract"} Google Doc` : "New Google Doc";
-  el.aiDocPrompt.value = "";
-  el.aiDocUseCurrent.checked = true;
-  el.aiDocHint.textContent = "This creates a real Google Doc in the connected Google account.";
-  el.aiDocDialog.showModal();
-}
-
 async function submitGenerateSimilar(event) {
   event.preventDefault();
   const sourceId = el.generateSource.value || state.activeId;
   if (!sourceId) {
-    el.generateHint.textContent = "Pick a contract card first, then try generate similar again.";
+    el.generateHint.textContent = "Pick a contract first.";
     return;
   }
 
@@ -593,6 +454,14 @@ async function submitGenerateSimilar(event) {
   await openContract(newId);
 }
 
+function openAiDocDialog() {
+  el.aiDocTitle.value = state.activeId ? `${el.titleInput.value || "Contract"} Google Doc` : "New Google Doc";
+  el.aiDocPrompt.value = "";
+  el.aiDocUseCurrent.checked = true;
+  el.aiDocHint.textContent = "This creates a real Google Doc in the connected Google account.";
+  el.aiDocDialog.showModal();
+}
+
 async function submitAiGoogleDoc(event) {
   event.preventDefault();
   await generateAiGoogleDoc();
@@ -602,14 +471,13 @@ async function generateAiGoogleDoc() {
   if (!ensureGoogleDocReady(() => generateAiGoogleDoc())) return;
   const prompt = el.aiDocPrompt.value.trim();
   if (!prompt) {
-    el.aiDocHint.textContent = "Add a prompt for the AI first.";
+    el.aiDocHint.textContent = "Add a prompt first.";
     return;
   }
 
-  const referenceContent =
-    el.aiDocUseCurrent.checked && state.activeId
-      ? JSON.stringify({ title: el.titleInput.value, category: el.categoryInput.value, pages: state.pages })
-      : "";
+  const referenceContent = state.activeId
+    ? JSON.stringify({ title: el.titleInput.value, category: el.categoryInput.value, pages: state.pages })
+    : "";
 
   el.aiDocHint.textContent = "Generating Google Doc...";
 
@@ -620,7 +488,7 @@ async function generateAiGoogleDoc() {
       accessToken: state.google.accessToken,
       title: el.aiDocTitle.value.trim() || "Generated Google Doc",
       prompt,
-      referenceContent
+      referenceContent: el.aiDocUseCurrent.checked ? referenceContent : ""
     })
   });
 
@@ -637,17 +505,14 @@ async function generateAiGoogleDoc() {
 async function createGoogleDocFromCurrent() {
   if (!ensureGoogleDocReady(() => createGoogleDocFromCurrent())) return;
 
-  const payload = {
-    accessToken: state.google.accessToken,
-    title: state.activeId ? `${el.titleInput.value || "Contract"} Google Doc` : "New Google Doc",
-    pages: state.activeId ? state.pages : [{ name: "Page 1", html: defaultHtml("New Google Doc") }]
-  };
-
-  updateDriveStatus("Creating Google Doc...");
   const response = await fetch("/api/google-docs/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({
+      accessToken: state.google.accessToken,
+      title: state.activeId ? `${el.titleInput.value || "Contract"} Google Doc` : "New Google Doc",
+      pages: state.activeId ? state.pages : [{ name: "Page 1", html: defaultHtml("New Google Doc") }]
+    })
   });
 
   const data = await response.json();
@@ -665,8 +530,6 @@ function applyGenerationInstructions(html, newTitle, instructions, sourceTitle) 
   wrapper.innerHTML = html || defaultHtml(newTitle);
   const firstHeading = wrapper.querySelector("h1");
   if (firstHeading) firstHeading.textContent = newTitle;
-  else wrapper.prepend(htmlToNode(`<h1>${esc(newTitle)}</h1>`));
-
   if (instructions) {
     wrapper.prepend(
       htmlToNode(`
@@ -677,7 +540,6 @@ function applyGenerationInstructions(html, newTitle, instructions, sourceTitle) 
       `)
     );
   }
-
   return wrapper.innerHTML;
 }
 
@@ -686,7 +548,6 @@ async function deleteContract() {
   await fetch(`/api/contracts/${state.activeId}`, { method: "DELETE" });
   state.contracts = state.contracts.filter((contract) => contract.id !== state.activeId);
   state.activeId = null;
-  state.activeContract = null;
   state.activeFiles = [];
   state.pages = [];
   renderGallery();
@@ -747,6 +608,41 @@ async function uploadFile(file) {
   if (isPdf(data.file)) await openPdf(data.file.id, data.file.name);
 }
 
+function renderFiles() {
+  el.fileCount.textContent = `${state.activeFiles.length} file${state.activeFiles.length === 1 ? "" : "s"}`;
+  el.insertTextFileBtn.disabled = !state.activeFiles.some(isTextFile);
+  el.fileList.innerHTML = "";
+
+  if (!state.activeFiles.length) {
+    el.fileList.innerHTML = '<p class="empty-note">No files attached yet. Upload or import one.</p>';
+    return;
+  }
+
+  state.activeFiles.forEach((file) => {
+    const article = document.createElement("article");
+    article.className = "file-item";
+    article.innerHTML = `
+      <h3>${esc(file.name)}</h3>
+      <div class="file-meta">
+        <span>${esc(file.mimeType)}</span>
+        <span>${fmtBytes(file.sizeBytes)}</span>
+      </div>
+    `;
+    const actions = document.createElement("div");
+    actions.className = "file-item-actions";
+    actions.innerHTML = `
+      <button class="ghost-btn" type="button" data-kind="download">Download</button>
+      ${isTextFile(file) ? '<button class="ghost-btn" type="button" data-kind="insert">Insert</button>' : ""}
+      ${isPdf(file) ? '<button class="ghost-btn" type="button" data-kind="pdf">Review PDF</button>' : ""}
+    `;
+    actions.querySelectorAll("[data-kind]").forEach((button) => {
+      button.onclick = () => fileAction(file, button.dataset.kind);
+    });
+    article.appendChild(actions);
+    el.fileList.appendChild(article);
+  });
+}
+
 async function fileAction(file, kind) {
   if (kind === "download") return downloadFile(file.id);
   if (kind === "insert") return insertFile(file.id);
@@ -774,7 +670,7 @@ async function insertFile(fileId) {
   const text = atob(file.base64Data);
   insertEditorHtml(file.mimeType.includes("html") ? text : `<h2>${esc(file.name)}</h2><pre>${esc(text)}</pre>`);
   syncCurrentPageFromEditor();
-  refreshInspector();
+  updateWordCount();
   scheduleSave();
 }
 
@@ -784,7 +680,6 @@ async function openPdf(fileId, label) {
   el.pdfFrame.src = URL.createObjectURL(blob);
   el.pdfReviewLabel.textContent = label;
   el.pdfReviewPane.classList.remove("hidden");
-  setEditorMode("pdf");
 }
 
 function hidePdf() {
@@ -795,88 +690,13 @@ function hidePdf() {
 
 function downloadHtml() {
   syncCurrentPageFromEditor();
-  const html = state.pages
-    .map((page) => `<section data-page="${esc(page.name)}">${page.html}</section>`)
-    .join("\n");
+  const html = state.pages.map((page) => `<section data-page="${esc(page.name)}">${page.html}</section>`).join("\n");
   const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = `${slug(el.titleInput.value || "contract")}.html`;
   anchor.click();
   URL.revokeObjectURL(url);
-}
-
-function execCmd(command) {
-  if (state.richEditor) {
-    state.richEditor.execCommand(command);
-  }
-  focusEditor();
-}
-
-function runAction(action) {
-  if (action === "h1") applyBlockFormat("h1");
-  if (action === "h2") applyBlockFormat("h2");
-  if (action === "paragraph") applyBlockFormat("p");
-  if (action === "table") {
-    insertEditorHtml("<table><thead><tr><th>Item</th><th>Due date</th><th>Notes</th></tr></thead><tbody><tr><td></td><td></td><td></td></tr></tbody></table><p></p>");
-  }
-  if (action === "signature") {
-    insertEditorHtml("<p>Signature: ____________________________</p><p>Name: _________________________________</p>");
-  }
-  if (action === "smartchip") {
-    insertEditorHtml('<span class="smart-chip">@Client Name</span>');
-  }
-  if (action === "dropdownchip") {
-    insertEditorHtml('<span class="smart-chip dropdown-chip">Status: Draft</span>');
-  }
-  if (action === "meetingnotes") {
-    insertEditorHtml("<h2>Meeting notes</h2><p><strong>Date:</strong> [Add date]</p><p><strong>Attendees:</strong> [Add names]</p><ul><li>Decision 1</li><li>Action item 1</li></ul>");
-  }
-  syncCurrentPageFromEditor();
-  refreshInspector();
-  scheduleSave();
-}
-
-function setEditorMode(mode) {
-  state.editorMode = mode;
-  const isWord = mode === "word";
-  el.wordModeBtn.classList.toggle("active", isWord);
-  el.pdfModeBtn.classList.toggle("active", !isWord);
-  el.editorShell.classList.toggle("word-mode", isWord);
-  el.editorShell.classList.toggle("pdf-mode", !isWord);
-  if (state.richEditor) {
-    const body = state.richEditor.getBody();
-    if (body) body.classList.toggle("pdf-editor", !isWord);
-  } else {
-    el.editor.classList.toggle("pdf-editor", !isWord);
-  }
-  el.editorModeBadge.textContent = isWord ? "Pages mode" : "PDF review mode";
-}
-
-function setWritingMode(mode) {
-  state.writingMode = mode;
-  el.editingModeBtn.classList.toggle("active", mode === "editing");
-  el.suggestingModeBtn.classList.toggle("active", mode === "suggesting");
-  if (state.richEditor) {
-    const body = state.richEditor.getBody();
-    if (body) body.classList.toggle("suggesting-editor", mode === "suggesting");
-  } else {
-    el.editor.classList.toggle("suggesting-editor", mode === "suggesting");
-  }
-}
-
-function addComment() {
-  if (!state.pages[state.activePageIndex]) return;
-  const text = window.prompt("Add a comment for this page:");
-  if (!text) return;
-  state.pages[state.activePageIndex].comments.unshift({
-    id: rid(),
-    author: "You",
-    text,
-    createdAt: new Date().toISOString()
-  });
-  renderComments();
-  scheduleSave();
 }
 
 function openSettings() {
@@ -909,7 +729,6 @@ async function saveSettings(event) {
 function initGoogle() {
   state.google.tokenClient = null;
   state.google.pickerReady = false;
-
   if (!state.settings?.googleDriveClientId) return;
 
   if (window.google?.accounts?.oauth2) {
@@ -924,12 +743,10 @@ function initGoogle() {
         }
         state.google.accessToken = response.access_token;
         updateDriveStatus("Drive connected.");
-        if (state.google.intent === "google-doc") {
-          if (typeof state.google.pendingAction === "function") {
-            const pendingAction = state.google.pendingAction;
-            state.google.pendingAction = null;
-            pendingAction();
-          }
+        if (state.google.intent === "google-doc" && typeof state.google.pendingAction === "function") {
+          const pendingAction = state.google.pendingAction;
+          state.google.pendingAction = null;
+          pendingAction();
           return;
         }
         await openPicker();
@@ -954,18 +771,15 @@ function connectGoogleDrive(mode = "import") {
     openSettings();
     return;
   }
-
   if (!state.google.tokenClient) initGoogle();
   if (!state.google.tokenClient) {
     updateDriveStatus("Google sign-in is still loading.");
     return;
   }
-
   if (state.google.accessToken) {
     openPicker();
     return;
   }
-
   updateDriveStatus("Requesting Drive access...");
   state.google.tokenClient.requestAccessToken({ prompt: "consent" });
 }
@@ -979,13 +793,11 @@ function ensureGoogleDocReady(action) {
     openSettings();
     return false;
   }
-
   if (!state.google.accessToken) {
     state.google.pendingAction = action || null;
     connectGoogleDrive("google-doc");
     return false;
   }
-
   return true;
 }
 
@@ -994,7 +806,6 @@ async function openPicker() {
     updateDriveStatus("Google Picker is still loading.");
     return;
   }
-
   const picker = new google.picker.PickerBuilder()
     .setAppId(state.settings.googleDriveProjectNumber)
     .setDeveloperKey(state.settings.googleDriveApiKey)
@@ -1007,7 +818,6 @@ async function openPicker() {
       await importDriveFile(data.docs[0]);
     })
     .build();
-
   picker.setVisible(true);
 }
 
@@ -1037,7 +847,6 @@ async function importDriveFile(doc) {
   const downloadResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`, {
     headers: { Authorization: `Bearer ${state.google.accessToken}` }
   });
-
   if (!downloadResponse.ok) {
     updateDriveStatus("Could not download the selected Drive file.");
     return;
@@ -1045,12 +854,8 @@ async function importDriveFile(doc) {
 
   const blob = await downloadResponse.blob();
   const base64Data = await blobToBase64(blob);
-
   if (!state.activeId) {
-    await createContract({
-      title: doc.name.replace(/\.[^.]+$/, "") || "Imported file",
-      category: "Imported from Drive"
-    });
+    await createContract({ title: doc.name.replace(/\.[^.]+$/, "") || "Imported file", category: "Imported from Drive" });
   }
 
   const uploadResponse = await fetch(`/api/contracts/${state.activeId}/files`, {
@@ -1070,7 +875,7 @@ async function importDriveFile(doc) {
     const text = await blob.text();
     insertEditorHtml(`<section><h2>${esc(doc.name)}</h2><pre>${esc(text)}</pre></section>`);
     syncCurrentPageFromEditor();
-    refreshInspector();
+    updateWordCount();
     scheduleSave();
   }
 
@@ -1091,9 +896,7 @@ function normalizeImportedHtml(html, fallbackTitle) {
 
 function updateDriveStatus(message) {
   el.driveStatus.textContent = message;
-  if (el.driveImportLabel) {
-    el.driveImportLabel.textContent = state.google.accessToken ? "Drive linked" : "Import from Drive";
-  }
+  el.driveImportLabel.textContent = state.google.accessToken ? "Drive linked" : "Import from Drive";
 }
 
 function setRoute(id, replace = false) {
@@ -1108,9 +911,7 @@ function setRoute(id, replace = false) {
 function goHome() {
   setView("home");
   setRoute("", false);
-  if (el.workspaceBannerTitle) {
-    el.workspaceBannerTitle.textContent = "Contract Workspace";
-  }
+  el.workspaceBannerTitle.textContent = "Contract Workspace";
 }
 
 async function fetchFile(fileId) {
@@ -1142,6 +943,7 @@ function setButtonsDisabled(disabled) {
   el.insertTextFileBtn.disabled = disabled;
   el.downloadHtmlBtn.disabled = disabled;
   el.deleteBtn.disabled = disabled;
+  el.createGoogleDocEditorBtn.disabled = disabled;
 }
 
 function setStatus(message) {
@@ -1150,12 +952,7 @@ function setStatus(message) {
 
 function fmtDate(value) {
   if (!value) return "just now";
-  return new Date(value).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit"
-  });
+  return new Date(value).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function fmtBytes(value) {
@@ -1169,34 +966,19 @@ function defaultHtml(title) {
 }
 
 function getEditorHtml() {
-  if (state.richEditor) {
-    return state.richEditor.getContent() || "";
-  }
-  return el.editor.value || "";
+  return state.richEditor ? state.richEditor.getContent() || "" : el.editor.value || "";
 }
 
 function setEditorHtml(html) {
   if (state.richEditor) {
     state.richEditor.setContent(html || "");
-    applyEditorBodyClasses();
     return;
   }
   el.editor.value = html || "";
 }
 
 function getEditorText() {
-  if (state.richEditor) {
-    return state.richEditor.getContent({ format: "text" }) || "";
-  }
-  return el.editor.value || "";
-}
-
-function focusEditor() {
-  if (state.richEditor) {
-    state.richEditor.focus();
-    return;
-  }
-  el.editor.focus();
+  return state.richEditor ? state.richEditor.getContent({ format: "text" }) || "" : el.editor.value || "";
 }
 
 function insertEditorHtml(html) {
@@ -1205,21 +987,6 @@ function insertEditorHtml(html) {
     return;
   }
   el.editor.value += html;
-}
-
-function applyBlockFormat(tagName) {
-  if (state.richEditor) {
-    state.richEditor.execCommand("FormatBlock", false, tagName);
-    return;
-  }
-}
-
-function applyEditorBodyClasses() {
-  if (!state.richEditor) return;
-  const body = state.richEditor.getBody();
-  if (!body) return;
-  body.classList.toggle("pdf-editor", state.editorMode !== "word");
-  body.classList.toggle("suggesting-editor", state.writingMode === "suggesting");
 }
 
 function htmlToNode(html) {
@@ -1242,10 +1009,7 @@ function escAttr(value) {
 }
 
 function slug(value) {
-  return String(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 function rid() {

@@ -177,7 +177,8 @@ textarea {
 .docs-top-left,
 .docs-top-right,
 .docs-meta-row,
-.docs-toolbar-row,
+.workspace-action-row,
+.page-nav-group,
 .editor-actions,
 .tab-nav {
   display: flex;
@@ -476,36 +477,6 @@ textarea {
   font-size: 0.88rem;
 }
 
-.docs-toolbar-wrap {
-  margin: 14px 18px;
-  padding: 10px 14px;
-}
-
-.docs-toolbar-row {
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.tools-row {
-  margin-top: 8px;
-}
-
-.docs-toolbar-row button {
-  min-height: 36px;
-}
-
-.toolbar-pill.active {
-  background: var(--blue-soft);
-  border-color: #c6dafc;
-  color: var(--blue);
-}
-
-.toolbar-divider {
-  width: 1px;
-  height: 26px;
-  background: var(--line);
-}
-
 .mini-field {
   display: flex;
   align-items: center;
@@ -521,38 +492,35 @@ textarea {
   width: 150px;
 }
 
-.docs-layout {
-  display: grid;
-  grid-template-columns: 190px minmax(0, 1fr) 200px;
-  gap: 14px;
-  padding: 14px 16px 18px;
-}
-
-.mini-doc-layout {
-  align-items: start;
-}
-
-.docs-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.docs-rightbar {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.docs-canvas-area {
-  min-width: 0;
-}
-
-.doc-tabs-bar {
-  display: flex;
-  justify-content: space-between;
+.workspace-action-row {
+  padding: 12px 16px;
+  border-top: 1px solid #e3e7ed;
+  border-bottom: 1px solid #dbe2ea;
+  background: #fff;
+  flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 14px;
+}
+
+.page-nav-group {
+  margin-left: auto;
+  align-items: center;
+}
+
+.editor-main-shell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
+}
+
+.editor-side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editor-canvas-shell {
+  min-width: 0;
 }
 
 .mini-status {
@@ -564,34 +532,14 @@ textarea {
 .docs-shell {
   border: 1px solid var(--line);
   border-radius: 12px;
-  min-height: 900px;
-  padding: 54px 20px 20px;
+  min-height: 720px;
+  padding: 20px;
 }
 
 .mini-doc-shell {
   min-height: 650px;
-  padding: 42px 20px 22px;
+  padding: 20px;
   background: #e8edf3;
-}
-
-.word-mode {
-  background: #eef2f7;
-}
-
-.pdf-mode {
-  background: #fff;
-}
-
-.editor-mode-badge {
-  position: absolute;
-  top: 16px;
-  right: 18px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: white;
-  color: var(--muted);
-  font-size: 0.82rem;
-  border: 1px solid var(--line);
 }
 
 .paper-frame {
@@ -663,43 +611,6 @@ textarea.editor {
   min-height: 520px !important;
 }
 
-.pdf-editor {
-  max-width: 100%;
-  box-shadow: none;
-  border-color: transparent;
-}
-
-.suggesting-editor {
-  background:
-    linear-gradient(180deg, rgba(255, 240, 181, 0.35), rgba(255, 240, 181, 0.35)),
-    white;
-}
-
-.editor table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.editor th,
-.editor td {
-  border: 1px solid #dadce0;
-  padding: 8px 10px;
-}
-
-.smart-chip {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--blue-soft);
-  color: var(--blue);
-  font-size: 0.92rem;
-}
-
-.dropdown-chip {
-  background: #fce8e6;
-  color: #c5221f;
-}
-
 .generated-brief {
   border: 1px solid #d2e3fc;
   border-radius: 12px;
@@ -709,34 +620,10 @@ textarea.editor {
 }
 
 .docs-tabs-list,
-.file-list,
-.comments-list,
-.outline-list {
+.file-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.outline-item {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: white;
-  text-align: left;
-  padding: 10px 12px;
-  cursor: pointer;
-}
-
-.comment-item {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: white;
-  padding: 12px;
-}
-
-.comment-item p,
-.comment-item small {
-  margin: 8px 0 0;
-  color: var(--muted);
 }
 
 .empty-note {
@@ -826,7 +713,7 @@ textarea.editor {
 
 @media (max-width: 1100px) {
   .home-hero,
-  .docs-layout {
+  .editor-main-shell {
     grid-template-columns: 1fr;
   }
 
@@ -845,6 +732,10 @@ textarea.editor {
   .docs-topbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .page-nav-group {
+    margin-left: 0;
   }
 
   .editor {
