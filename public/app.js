@@ -9,7 +9,8 @@ const state = {
   activePageIndex: 0,
   saveTimer: null,
   richEditor: null,
-  google: { tokenClient: null, accessToken: null, pickerReady: false, pendingAction: null }
+  google: { tokenClient: null, accessToken: null, pickerReady: false, pendingAction: null },
+  pdfEditor: { fileId: null, fileName: "", sourceBase64: "", annotations: [], addTextMode: false, objectUrls: [] }
 };
 
 const el = {
@@ -52,8 +53,11 @@ const el = {
   wordCount: document.querySelector("#wordCount"),
   editor: document.querySelector("#editor"),
   pdfReviewPane: document.querySelector("#pdfReviewPane"),
-  pdfFrame: document.querySelector("#pdfFrame"),
   pdfReviewLabel: document.querySelector("#pdfReviewLabel"),
+  pdfAddTextBtn: document.querySelector("#pdfAddTextBtn"),
+  pdfSaveBtn: document.querySelector("#pdfSaveBtn"),
+  pdfCloseBtn: document.querySelector("#pdfCloseBtn"),
+  pdfCanvasList: document.querySelector("#pdfCanvasList"),
   fileList: document.querySelector("#fileList"),
   fileCount: document.querySelector("#fileCount"),
   driveImportLabel: document.querySelector("#driveImportLabel"),
@@ -95,6 +99,9 @@ el.generateBtn.onclick = () => openGenerateDialog();
 el.insertTextFileBtn.onclick = () => insertRecentText();
 el.connectDriveBtn.onclick = () => connectGoogleDrive("import");
 el.fileInput.onchange = (event) => uploadFile(event.target.files?.[0]);
+el.pdfAddTextBtn.onclick = () => togglePdfTextMode();
+el.pdfSaveBtn.onclick = () => saveEditedPdf();
+el.pdfCloseBtn.onclick = () => hidePdf();
 el.settingsCloseBtn.onclick = () => closeSettings();
 el.generateCloseBtn.onclick = () => el.generateDialog.close();
 el.aiDocCloseBtn.onclick = () => el.aiDocDialog.close();
@@ -117,6 +124,7 @@ boot();
 
 async function boot() {
   await loadSettings();
+  initPdfRuntime();
   await loadTinyMce();
   await initEditor();
   applyWorkspaceSettings();
@@ -124,6 +132,13 @@ async function boot() {
   setButtonsDisabled(true);
   await loadContracts();
   await loadFromRoute();
+}
+
+function initPdfRuntime() {
+  if (window.pdfjsLib?.GlobalWorkerOptions) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js";
+  }
 }
 
 function loadTinyMce() {
@@ -610,13 +625,13 @@ async function uploadFile(file) {
   state.activeFiles.unshift(data.file);
   renderFiles();
 
-  if (isTextFile(data.file)) await insertFile(data.file.id);
+  if (isEditableImportFile(data.file)) await insertFile(data.file.id);
   if (isPdf(data.file)) await openPdf(data.file.id, data.file.name);
 }
 
 function renderFiles() {
   el.fileCount.textContent = `${state.activeFiles.length} file${state.activeFiles.length === 1 ? "" : "s"}`;
-  el.insertTextFileBtn.disabled = !state.activeFiles.some(isTextFile);
+  el.insertTextFileBtn.disabled = !state.activeFiles.some(isEditableImportFile);
   el.fileList.innerHTML = "";
 
   if (!state.activeFiles.length) {
@@ -638,8 +653,8 @@ function renderFiles() {
     actions.className = "file-item-actions";
     actions.innerHTML = `
       <button class="ghost-btn" type="button" data-kind="download">Download</button>
-      ${isTextFile(file) ? '<button class="ghost-btn" type="button" data-kind="insert">Insert</button>' : ""}
-      ${isPdf(file) ? '<button class="ghost-btn" type="button" data-kind="pdf">Review PDF</button>' : ""}
+      ${isEditableImportFile(file) ? '<button class="ghost-btn" type="button" data-kind="insert">Insert</button>' : ""}
+      ${isPdf(file) ? '<button class="ghost-btn" type="button" data-kind="pdf">Edit PDF</button>' : ""}
     `;
     actions.querySelectorAll("[data-kind]").forEach((button) => {
       button.onclick = () => fileAction(file, button.dataset.kind);
@@ -667,14 +682,14 @@ async function downloadFile(fileId) {
 }
 
 async function insertRecentText() {
-  const file = state.activeFiles.find(isTextFile);
+  const file = state.activeFiles.find(isEditableImportFile);
   if (file) await insertFile(file.id);
 }
 
 async function insertFile(fileId) {
   const file = await fetchFile(fileId);
-  const text = atob(file.base64Data);
-  insertEditorHtml(file.mimeType.includes("html") ? text : `<h2>${esc(file.name)}</h2><pre>${esc(text)}</pre>`);
+  const html = await fileToEditorHtml(file);
+  insertEditorHtml(html);
   syncCurrentPageFromEditor();
   updateWordCount();
   scheduleSave();
@@ -682,15 +697,27 @@ async function insertFile(fileId) {
 
 async function openPdf(fileId, label) {
   const file = await fetchFile(fileId);
-  const blob = toBlob(file.base64Data, file.mimeType);
-  el.pdfFrame.src = URL.createObjectURL(blob);
+  state.pdfEditor.fileId = fileId;
+  state.pdfEditor.fileName = label;
+  state.pdfEditor.sourceBase64 = file.base64Data;
+  state.pdfEditor.annotations = [];
+  state.pdfEditor.addTextMode = false;
+  el.pdfAddTextBtn.classList.remove("active");
   el.pdfReviewLabel.textContent = label;
   el.pdfReviewPane.classList.remove("hidden");
+  await renderPdfEditor(file.base64Data);
 }
 
 function hidePdf() {
+  state.pdfEditor.objectUrls.forEach((url) => URL.revokeObjectURL(url));
+  state.pdfEditor.objectUrls = [];
+  state.pdfEditor.fileId = null;
+  state.pdfEditor.fileName = "";
+  state.pdfEditor.sourceBase64 = "";
+  state.pdfEditor.annotations = [];
+  state.pdfEditor.addTextMode = false;
   el.pdfReviewPane.classList.add("hidden");
-  el.pdfFrame.removeAttribute("src");
+  el.pdfCanvasList.innerHTML = "";
   el.pdfReviewLabel.textContent = "No PDF selected";
 }
 
@@ -881,9 +908,9 @@ async function importDriveFile(doc) {
   state.activeFiles.unshift(uploadData.file);
   renderFiles();
 
-  if (isTextMime(blob.type || mimeType)) {
-    const text = await blob.text();
-    insertEditorHtml(`<section><h2>${esc(doc.name)}</h2><pre>${esc(text)}</pre></section>`);
+  if (isEditableImportFile({ name: doc.name, mimeType: blob.type || mimeType })) {
+    const importedHtml = await blobToEditorHtml(blob, doc.name, mimeType || blob.type);
+    insertEditorHtml(importedHtml);
     syncCurrentPageFromEditor();
     updateWordCount();
     scheduleSave();
@@ -1160,8 +1187,170 @@ function isTextMime(mimeType) {
   return /text|json|xml|html|markdown/.test(mimeType);
 }
 
+function isDocx(file) {
+  const name = (file.name || "").toLowerCase();
+  return file.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || name.endsWith(".docx");
+}
+
+function isRtf(file) {
+  const name = (file.name || "").toLowerCase();
+  return /rtf/.test(file.mimeType || "") || name.endsWith(".rtf");
+}
+
+function isEditableImportFile(file) {
+  return isTextFile(file) || isDocx(file) || isRtf(file);
+}
+
 function isPdf(file) {
   return file.mimeType === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+}
+
+async function fileToEditorHtml(file) {
+  const blob = toBlob(file.base64Data, file.mimeType);
+  return blobToEditorHtml(blob, file.name, file.mimeType);
+}
+
+async function blobToEditorHtml(blob, name, mimeType = "") {
+  if (isDocx({ name, mimeType })) {
+    const arrayBuffer = await blob.arrayBuffer();
+    const result = await window.mammoth.convertToHtml({ arrayBuffer });
+    return `<section><h2>${esc(name)}</h2>${result.value}</section>`;
+  }
+
+  if (isRtf({ name, mimeType })) {
+    const text = await blob.text();
+    return `<section><h2>${esc(name)}</h2><pre>${esc(stripRtf(text))}</pre></section>`;
+  }
+
+  const text = await blob.text();
+  if ((mimeType || "").includes("html") || /\.html?$/i.test(name)) {
+    return `<section><h2>${esc(name)}</h2>${normalizeImportedHtml(text, name)}</section>`;
+  }
+  return `<section><h2>${esc(name)}</h2><pre>${esc(text)}</pre></section>`;
+}
+
+function stripRtf(text) {
+  return String(text || "")
+    .replace(/\\par[d]?/g, "\n")
+    .replace(/\\'[0-9a-f]{2}/gi, "")
+    .replace(/\\[a-z]+\d* ?/gi, "")
+    .replace(/[{}]/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+async function renderPdfEditor(base64Data) {
+  if (!window.pdfjsLib) return;
+  const pdfBytes = Uint8Array.from(atob(base64Data), (char) => char.charCodeAt(0));
+  const pdf = await window.pdfjsLib.getDocument({ data: pdfBytes }).promise;
+  el.pdfCanvasList.innerHTML = "";
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1.15 });
+    const wrapper = document.createElement("div");
+    wrapper.className = "pdf-page-wrap";
+    wrapper.dataset.page = String(pageNumber);
+
+    const canvas = document.createElement("canvas");
+    canvas.className = "pdf-page-canvas";
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+
+    const overlay = document.createElement("div");
+    overlay.className = "pdf-page-overlay";
+    overlay.style.width = `${viewport.width}px`;
+    overlay.style.height = `${viewport.height}px`;
+    overlay.onclick = (event) => handlePdfOverlayClick(event, pageNumber, viewport);
+
+    wrapper.appendChild(canvas);
+    wrapper.appendChild(overlay);
+    el.pdfCanvasList.appendChild(wrapper);
+  }
+}
+
+function togglePdfTextMode() {
+  state.pdfEditor.addTextMode = !state.pdfEditor.addTextMode;
+  el.pdfAddTextBtn.classList.toggle("active", state.pdfEditor.addTextMode);
+}
+
+function handlePdfOverlayClick(event, pageNumber, viewport) {
+  if (!state.pdfEditor.addTextMode) return;
+  const bounds = event.currentTarget.getBoundingClientRect();
+  const x = event.clientX - bounds.left;
+  const y = event.clientY - bounds.top;
+  const textValue = window.prompt("Text to place on this PDF page:");
+  if (!textValue) return;
+
+  const note = {
+    id: rid(),
+    pageNumber,
+    text: textValue,
+    x,
+    y,
+    pageWidth: viewport.width,
+    pageHeight: viewport.height
+  };
+
+  state.pdfEditor.annotations.push(note);
+  drawPdfAnnotation(event.currentTarget, note);
+}
+
+function drawPdfAnnotation(overlay, note) {
+  const badge = document.createElement("button");
+  badge.type = "button";
+  badge.className = "pdf-text-note";
+  badge.style.left = `${note.x}px`;
+  badge.style.top = `${note.y}px`;
+  badge.textContent = note.text;
+  badge.onclick = () => {
+    if (!window.confirm("Remove this PDF note?")) return;
+    state.pdfEditor.annotations = state.pdfEditor.annotations.filter((item) => item.id !== note.id);
+    badge.remove();
+  };
+  overlay.appendChild(badge);
+}
+
+async function saveEditedPdf() {
+  if (!state.pdfEditor.sourceBase64) return;
+  const pdfBytes = Uint8Array.from(atob(state.pdfEditor.sourceBase64), (char) => char.charCodeAt(0));
+  const pdfDoc = await window.PDFLib.PDFDocument.load(pdfBytes);
+  const font = await pdfDoc.embedFont(window.PDFLib.StandardFonts.Helvetica);
+  const pages = pdfDoc.getPages();
+
+  state.pdfEditor.annotations.forEach((note) => {
+    const page = pages[note.pageNumber - 1];
+    if (!page) return;
+    const { width, height } = page.getSize();
+    const x = (note.x / note.pageWidth) * width;
+    const y = height - (note.y / note.pageHeight) * height;
+    page.drawText(note.text, {
+      x,
+      y,
+      size: 12,
+      font,
+      color: window.PDFLib.rgb(0.14, 0.26, 0.54)
+    });
+  });
+
+  const savedBytes = await pdfDoc.save();
+  const blob = new Blob([savedBytes], { type: "application/pdf" });
+  const base64Data = await blobToBase64(blob);
+
+  const response = await fetch(`/api/contracts/${state.activeId}/files`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: state.pdfEditor.fileName.replace(/\.pdf$/i, "") + "-edited.pdf",
+      mimeType: "application/pdf",
+      base64Data
+    })
+  });
+  const data = await response.json();
+  state.activeFiles.unshift(data.file);
+  renderFiles();
+  await openPdf(data.file.id, data.file.name);
 }
 
 function asBase64(file) {

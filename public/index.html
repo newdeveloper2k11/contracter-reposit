@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="/styles.css" />
     <script async defer src="https://accounts.google.com/gsi/client"></script>
     <script async defer src="https://apis.google.com/js/api.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -32,7 +35,7 @@
                 <button id="homeDriveBtn" class="quick-action" type="button">Open Drive picker</button>
                 <label class="quick-action file-label">
                   Upload from computer
-                  <input id="fileInput" type="file" hidden />
+                  <input id="fileInput" type="file" accept=".txt,.md,.html,.htm,.json,.xml,.csv,.rtf,.docx,.pdf" hidden />
                 </label>
                 <button id="homeTemplatesBtn" class="quick-action" type="button">Generate similar</button>
               </div>
@@ -166,7 +169,12 @@
                       <strong>PDF review mode</strong>
                       <span id="pdfReviewLabel" class="mini-status">No PDF selected</span>
                     </div>
-                    <iframe id="pdfFrame" class="pdf-frame" title="PDF review"></iframe>
+                    <div class="pdf-editor-toolbar">
+                      <button id="pdfAddTextBtn" class="ghost-btn" type="button">Add text note</button>
+                      <button id="pdfSaveBtn" class="primary-action" type="button">Save edited PDF</button>
+                      <button id="pdfCloseBtn" class="ghost-btn" type="button">Close PDF</button>
+                    </div>
+                    <div id="pdfCanvasList" class="pdf-canvas-list"></div>
                   </div>
                 </div>
               </section>
