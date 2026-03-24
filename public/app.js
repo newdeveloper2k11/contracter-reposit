@@ -60,10 +60,6 @@ const el = {
   settingsDialog: document.querySelector("#settingsDialog"),
   settingsCloseBtn: document.querySelector("#settingsCloseBtn"),
   settingsForm: document.querySelector("#settingsForm"),
-  googleDriveClientId: document.querySelector("#googleDriveClientId"),
-  googleDriveApiKey: document.querySelector("#googleDriveApiKey"),
-  googleDriveProjectNumber: document.querySelector("#googleDriveProjectNumber"),
-  storageMode: document.querySelector("#storageMode"),
   appearanceTheme: document.querySelector("#appearanceTheme"),
   backgroundStyle: document.querySelector("#backgroundStyle"),
   uiLocale: document.querySelector("#uiLocale"),
@@ -197,10 +193,6 @@ async function loadSettings() {
   const response = await fetch("/api/settings");
   const data = await response.json();
   state.settings = data.settings || {};
-  el.googleDriveClientId.value = state.settings.googleDriveClientId || "";
-  el.googleDriveApiKey.value = state.settings.googleDriveApiKey || "";
-  el.googleDriveProjectNumber.value = state.settings.googleDriveProjectNumber || "";
-  el.storageMode.value = state.settings.storageMode || "database";
   el.appearanceTheme.value = state.settings.appearanceTheme || "aurora";
   el.backgroundStyle.value = state.settings.backgroundStyle || "glow";
   el.uiLocale.value = state.settings.uiLocale || "en-US";
@@ -714,10 +706,6 @@ function downloadHtml() {
 }
 
 function openSettings() {
-  el.googleDriveClientId.value = state.settings?.googleDriveClientId || "";
-  el.googleDriveApiKey.value = state.settings?.googleDriveApiKey || "";
-  el.googleDriveProjectNumber.value = state.settings?.googleDriveProjectNumber || "";
-  el.storageMode.value = state.settings?.storageMode || "database";
   el.appearanceTheme.value = state.settings?.appearanceTheme || "aurora";
   el.backgroundStyle.value = state.settings?.backgroundStyle || "glow";
   el.uiLocale.value = state.settings?.uiLocale || "en-US";
@@ -735,10 +723,6 @@ async function saveSettings(event) {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      googleDriveClientId: el.googleDriveClientId.value.trim(),
-      googleDriveApiKey: el.googleDriveApiKey.value.trim(),
-      googleDriveProjectNumber: el.googleDriveProjectNumber.value.trim(),
-      storageMode: el.storageMode.value,
       appearanceTheme: el.appearanceTheme.value,
       backgroundStyle: el.backgroundStyle.value,
       uiLocale: el.uiLocale.value

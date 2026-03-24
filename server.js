@@ -355,10 +355,18 @@ async function handleApi(req, res, url) {
   if (req.method === "PUT" && url.pathname === "/api/settings") {
     const body = await readJson(req);
     const now = new Date().toISOString();
-    putSetting("googleDriveClientId", safeText(body.googleDriveClientId || "", ""), now);
-    putSetting("googleDriveApiKey", safeText(body.googleDriveApiKey || "", ""), now);
-    putSetting("googleDriveProjectNumber", safeText(body.googleDriveProjectNumber || "", ""), now);
-    putSetting("storageMode", safeText(body.storageMode || "database", "database"), now);
+    if (Object.prototype.hasOwnProperty.call(body, "googleDriveClientId")) {
+      putSetting("googleDriveClientId", safeText(body.googleDriveClientId || "", ""), now);
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "googleDriveApiKey")) {
+      putSetting("googleDriveApiKey", safeText(body.googleDriveApiKey || "", ""), now);
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "googleDriveProjectNumber")) {
+      putSetting("googleDriveProjectNumber", safeText(body.googleDriveProjectNumber || "", ""), now);
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "storageMode")) {
+      putSetting("storageMode", safeText(body.storageMode || "database", "database"), now);
+    }
     putSetting("appearanceTheme", safeText(body.appearanceTheme || "aurora", "aurora"), now);
     putSetting("backgroundStyle", safeText(body.backgroundStyle || "glow", "glow"), now);
     putSetting("uiLocale", safeText(body.uiLocale || "en-US", "en-US"), now);

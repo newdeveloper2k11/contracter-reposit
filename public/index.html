@@ -14,7 +14,7 @@
         <header class="home-header">
           <div class="home-brand">Contract Vault</div>
           <div class="home-actions">
-            <button id="settingsBtn" class="ghost-btn" type="button">Cloud settings</button>
+            <button id="settingsBtn" class="ghost-btn" type="button">Settings</button>
           </div>
         </header>
 
@@ -70,7 +70,7 @@
               <span class="workspace-pill">Workspace</span>
               <span class="workspace-pill active">My Document</span>
             </div>
-            <button id="settingsBtnEditor" class="ghost-btn" type="button">Cloud settings</button>
+            <button id="settingsBtnEditor" class="ghost-btn" type="button">Settings</button>
           </header>
 
           <section class="workspace-banner">
@@ -181,33 +181,15 @@
         <div class="settings-header">
           <div>
             <p class="eyebrow">Settings</p>
-            <h2>Language, colors, and cloud setup</h2>
+            <h2>Language, colors, and workspace style</h2>
           </div>
           <button id="settingsCloseBtn" class="ghost-btn" type="button">Back</button>
         </div>
 
-        <label>
-          <span>Google client ID</span>
-          <input id="googleDriveClientId" type="text" placeholder="1234567890-xxxxx.apps.googleusercontent.com" />
-        </label>
-
-        <label>
-          <span>Google API key</span>
-          <input id="googleDriveApiKey" type="text" placeholder="AIza..." />
-        </label>
-
-        <label>
-          <span>Google project number</span>
-          <input id="googleDriveProjectNumber" type="text" placeholder="123456789012" />
-        </label>
-
-        <label>
-          <span>Storage mode</span>
-          <select id="storageMode">
-            <option value="database">Encrypted database</option>
-            <option value="database+drive">Encrypted database + Drive import</option>
-          </select>
-        </label>
+        <div class="settings-note-card">
+          <strong>Cloud keys hidden</strong>
+          <p>Google and storage credentials now stay on the server side and are no longer editable in this page.</p>
+        </div>
 
         <label>
           <span>Color theme</span>
