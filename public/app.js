@@ -805,7 +805,7 @@ function connectGoogleDrive(mode = "import") {
     !state.settings?.googleDriveApiKey ||
     !state.settings?.googleDriveProjectNumber
   ) {
-    openSettings();
+    updateDriveStatus("Drive is not configured on the server yet.");
     return;
   }
   if (!state.google.tokenClient) initGoogle();
@@ -827,7 +827,7 @@ function ensureGoogleDocReady(action) {
     !state.settings?.googleDriveApiKey ||
     !state.settings?.googleDriveProjectNumber
   ) {
-    openSettings();
+    updateDriveStatus("Google Docs is not configured on the server yet.");
     return false;
   }
   if (!state.google.accessToken) {
@@ -849,6 +849,7 @@ async function openPicker() {
     .setOAuthToken(state.google.accessToken)
     .addView(new google.picker.DocsView(google.picker.ViewId.DOCS))
     .addView(new google.picker.DocsView(google.picker.ViewId.PDFS))
+    .addView(new google.picker.DocsView(google.picker.ViewId.DOCUMENTS))
     .addView(new google.picker.DocsUploadView())
     .setCallback(async (data) => {
       if (data.action !== google.picker.Action.PICKED || !data.docs?.length) return;
@@ -877,6 +878,27 @@ async function importDriveFile(doc) {
       pages: [{ id: rid(), name: "Page 1", html: normalizeImportedHtml(html, doc.name), comments: [] }]
     });
     await createContract({ title: doc.name, category: "Imported from Drive", content });
+    updateDriveStatus(`Imported ${doc.name} into the website editor.`);
+    return;
+  }
+
+  if (mimeType === "application/vnd.google-apps.spreadsheet") {
+    const response = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${doc.id}/export?mimeType=text/csv`,
+      { headers: { Authorization: `Bearer ${state.google.accessToken}` } }
+    );
+    if (!response.ok) {
+      updateDriveStatus("Could not import that Google Sheet.");
+      return;
+    }
+    const csvText = await response.text();
+    if (!state.activeId) {
+      await createContract({ title: doc.name, category: "Imported from Drive" });
+    }
+    insertEditorHtml(`<section><h2>${esc(doc.name)}</h2><pre>${esc(csvText)}</pre></section>`);
+    syncCurrentPageFromEditor();
+    updateWordCount();
+    scheduleSave();
     updateDriveStatus(`Imported ${doc.name} into the website editor.`);
     return;
   }
