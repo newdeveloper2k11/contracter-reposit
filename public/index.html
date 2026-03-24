@@ -174,16 +174,16 @@
           </section>
         </div>
       </section>
-    </div>
 
-    <dialog id="settingsDialog" class="settings-dialog">
-      <form id="settingsForm" method="dialog" class="settings-form">
+      <section id="settingsView" class="view settings-view hidden">
+        <div class="settings-page-shell">
+      <form id="settingsForm" class="settings-form settings-page-form">
         <div class="settings-header">
           <div>
-            <p class="eyebrow">Workspace settings</p>
-            <h2>Cloud, appearance, and language</h2>
+            <p class="eyebrow">Settings</p>
+            <h2>Language, colors, and cloud setup</h2>
           </div>
-          <button id="settingsCloseBtn" class="ghost-btn" type="button">Close</button>
+          <button id="settingsCloseBtn" class="ghost-btn" type="button">Back</button>
         </div>
 
         <label>
@@ -240,7 +240,9 @@
 
         <button id="saveSettingsBtn" class="primary-action" type="submit">Save settings</button>
       </form>
-    </dialog>
+        </div>
+      </section>
+    </div>
 
     <dialog id="generateDialog" class="settings-dialog">
       <form id="generateForm" method="dialog" class="settings-form">

@@ -3,6 +3,8 @@ const state = {
   activeId: null,
   activeFiles: [],
   settings: null,
+  currentView: "home",
+  previousView: "home",
   pages: [],
   activePageIndex: 0,
   saveTimer: null,
@@ -13,6 +15,7 @@ const state = {
 const el = {
   homeView: document.querySelector("#homeView"),
   editorView: document.querySelector("#editorView"),
+  settingsView: document.querySelector("#settingsView"),
   backBtn: document.querySelector("#backBtn"),
   settingsBtn: document.querySelector("#settingsBtn"),
   settingsBtnEditor: document.querySelector("#settingsBtnEditor"),
@@ -96,7 +99,7 @@ el.generateBtn.onclick = () => openGenerateDialog();
 el.insertTextFileBtn.onclick = () => insertRecentText();
 el.connectDriveBtn.onclick = () => connectGoogleDrive("import");
 el.fileInput.onchange = (event) => uploadFile(event.target.files?.[0]);
-el.settingsCloseBtn.onclick = () => el.settingsDialog.close();
+el.settingsCloseBtn.onclick = () => closeSettings();
 el.generateCloseBtn.onclick = () => el.generateDialog.close();
 el.aiDocCloseBtn.onclick = () => el.aiDocDialog.close();
 el.titleInput.oninput = () => scheduleSave();
@@ -715,7 +718,15 @@ function openSettings() {
   el.googleDriveApiKey.value = state.settings?.googleDriveApiKey || "";
   el.googleDriveProjectNumber.value = state.settings?.googleDriveProjectNumber || "";
   el.storageMode.value = state.settings?.storageMode || "database";
-  el.settingsDialog.showModal();
+  el.appearanceTheme.value = state.settings?.appearanceTheme || "aurora";
+  el.backgroundStyle.value = state.settings?.backgroundStyle || "glow";
+  el.uiLocale.value = state.settings?.uiLocale || "en-US";
+  state.previousView = state.currentView === "settings" ? state.previousView : state.currentView;
+  setView("settings");
+}
+
+function closeSettings() {
+  setView(state.previousView || "home");
 }
 
 async function saveSettings(event) {
@@ -738,7 +749,7 @@ async function saveSettings(event) {
   applyWorkspaceSettings();
   initGoogle();
   updateDriveStatus("Cloud settings saved.");
-  el.settingsDialog.close();
+  closeSettings();
 }
 
 function initGoogle() {
@@ -948,8 +959,10 @@ function listItem(contract, files = []) {
 }
 
 function setView(view) {
+  state.currentView = view;
   el.homeView.classList.toggle("hidden", view !== "home");
   el.editorView.classList.toggle("hidden", view !== "editor");
+  el.settingsView.classList.toggle("hidden", view !== "settings");
 }
 
 function setButtonsDisabled(disabled) {

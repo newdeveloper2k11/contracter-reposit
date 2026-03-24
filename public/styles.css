@@ -243,6 +243,12 @@ textarea {
   gap: 12px;
 }
 
+.section-row {
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
 .home-hero {
   display: grid;
   grid-template-columns: 1.4fr 0.8fr;
@@ -252,7 +258,8 @@ textarea {
 .hero-card,
 .home-card,
 .sidebar-card,
-.docs-toolbar-wrap {
+.docs-toolbar-wrap,
+.settings-page-form {
   background: var(--panel-tint);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -825,6 +832,22 @@ textarea.editor {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.settings-view {
+  padding: 32px 24px 48px;
+}
+
+.settings-page-shell {
+  max-width: 940px;
+  margin: 0 auto;
+}
+
+.settings-page-form {
+  border-radius: 24px;
+  padding: 28px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,251,255,0.94) 100%);
 }
 
 .settings-header {
