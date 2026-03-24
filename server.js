@@ -343,7 +343,10 @@ async function handleApi(req, res, url) {
         googleDriveApiKey: getSetting("googleDriveApiKey", ""),
         googleDriveProjectNumber: getSetting("googleDriveProjectNumber", ""),
         storageMode: getSetting("storageMode", "database"),
-        tinyMceKey: getSetting("tinyMceKey", "")
+        tinyMceKey: getSetting("tinyMceKey", ""),
+        appearanceTheme: getSetting("appearanceTheme", "aurora"),
+        backgroundStyle: getSetting("backgroundStyle", "glow"),
+        uiLocale: getSetting("uiLocale", "en-US")
       }
     });
     return;
@@ -356,6 +359,9 @@ async function handleApi(req, res, url) {
     putSetting("googleDriveApiKey", safeText(body.googleDriveApiKey || "", ""), now);
     putSetting("googleDriveProjectNumber", safeText(body.googleDriveProjectNumber || "", ""), now);
     putSetting("storageMode", safeText(body.storageMode || "database", "database"), now);
+    putSetting("appearanceTheme", safeText(body.appearanceTheme || "aurora", "aurora"), now);
+    putSetting("backgroundStyle", safeText(body.backgroundStyle || "glow", "glow"), now);
+    putSetting("uiLocale", safeText(body.uiLocale || "en-US", "en-US"), now);
 
     sendJson(res, 200, {
       success: true,
@@ -364,7 +370,10 @@ async function handleApi(req, res, url) {
         googleDriveApiKey: getSetting("googleDriveApiKey", ""),
         googleDriveProjectNumber: getSetting("googleDriveProjectNumber", ""),
         storageMode: getSetting("storageMode", "database"),
-        tinyMceKey: getSetting("tinyMceKey", "")
+        tinyMceKey: getSetting("tinyMceKey", ""),
+        appearanceTheme: getSetting("appearanceTheme", "aurora"),
+        backgroundStyle: getSetting("backgroundStyle", "glow"),
+        uiLocale: getSetting("uiLocale", "en-US")
       }
     });
     return;

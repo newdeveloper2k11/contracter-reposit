@@ -180,8 +180,8 @@
       <form id="settingsForm" method="dialog" class="settings-form">
         <div class="settings-header">
           <div>
-            <p class="eyebrow">Cloud settings</p>
-            <h2>Google Drive and storage</h2>
+            <p class="eyebrow">Workspace settings</p>
+            <h2>Cloud, appearance, and language</h2>
           </div>
           <button id="settingsCloseBtn" class="ghost-btn" type="button">Close</button>
         </div>
@@ -208,6 +208,35 @@
             <option value="database+drive">Encrypted database + Drive import</option>
           </select>
         </label>
+
+        <label>
+          <span>Color theme</span>
+          <select id="appearanceTheme">
+            <option value="aurora">Aurora blue</option>
+            <option value="sunset">Sunset coral</option>
+            <option value="forest">Forest mint</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Background style</span>
+          <select id="backgroundStyle">
+            <option value="glow">Color glow</option>
+            <option value="mesh">Soft mesh</option>
+            <option value="paper">Paper calm</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Language and locale</span>
+          <select id="uiLocale">
+            <option value="en-US">English</option>
+            <option value="vi-VN">Tiếng Việt</option>
+            <option value="en-US-u-em-emoji">English + emoji</option>
+          </select>
+        </label>
+
+        <p class="helper-copy">The editor uses a Unicode-friendly font stack so English, Vietnamese, and emoji stay readable.</p>
 
         <button id="saveSettingsBtn" class="primary-action" type="submit">Save settings</button>
       </form>

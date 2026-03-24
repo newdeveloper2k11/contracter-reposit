@@ -61,6 +61,9 @@ const el = {
   googleDriveApiKey: document.querySelector("#googleDriveApiKey"),
   googleDriveProjectNumber: document.querySelector("#googleDriveProjectNumber"),
   storageMode: document.querySelector("#storageMode"),
+  appearanceTheme: document.querySelector("#appearanceTheme"),
+  backgroundStyle: document.querySelector("#backgroundStyle"),
+  uiLocale: document.querySelector("#uiLocale"),
   generateDialog: document.querySelector("#generateDialog"),
   generateCloseBtn: document.querySelector("#generateCloseBtn"),
   generateForm: document.querySelector("#generateForm"),
@@ -117,6 +120,7 @@ async function boot() {
   await loadSettings();
   await loadTinyMce();
   await initEditor();
+  applyWorkspaceSettings();
   initGoogle();
   setButtonsDisabled(true);
   await loadContracts();
@@ -167,10 +171,13 @@ function initEditor() {
       toolbar:
         "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | alignleft aligncenter alignright | bullist numlist outdent indent | table link image | removeformat code",
       min_height: 560,
+      content_style:
+        "body{font-family:'Segoe UI','Noto Sans','Arial Unicode MS',Arial,Helvetica,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;line-height:1.7;color:#202124;padding:24px;} p{margin:0 0 1em;} h1,h2,h3{line-height:1.25;}",
       setup(editor) {
         editor.on("init", () => {
           state.richEditor = editor;
           setEditorHtml("");
+          applyWorkspaceSettings();
           resolve();
         });
         editor.on("input change keyup undo redo SetContent", () => {
@@ -191,6 +198,10 @@ async function loadSettings() {
   el.googleDriveApiKey.value = state.settings.googleDriveApiKey || "";
   el.googleDriveProjectNumber.value = state.settings.googleDriveProjectNumber || "";
   el.storageMode.value = state.settings.storageMode || "database";
+  el.appearanceTheme.value = state.settings.appearanceTheme || "aurora";
+  el.backgroundStyle.value = state.settings.backgroundStyle || "glow";
+  el.uiLocale.value = state.settings.uiLocale || "en-US";
+  applyWorkspaceSettings();
   updateDriveStatus("Drive not connected.");
 }
 
@@ -716,11 +727,15 @@ async function saveSettings(event) {
       googleDriveClientId: el.googleDriveClientId.value.trim(),
       googleDriveApiKey: el.googleDriveApiKey.value.trim(),
       googleDriveProjectNumber: el.googleDriveProjectNumber.value.trim(),
-      storageMode: el.storageMode.value
+      storageMode: el.storageMode.value,
+      appearanceTheme: el.appearanceTheme.value,
+      backgroundStyle: el.backgroundStyle.value,
+      uiLocale: el.uiLocale.value
     })
   });
   const data = await response.json();
   state.settings = data.settings || {};
+  applyWorkspaceSettings();
   initGoogle();
   updateDriveStatus("Cloud settings saved.");
   el.settingsDialog.close();
@@ -952,7 +967,12 @@ function setStatus(message) {
 
 function fmtDate(value) {
   if (!value) return "just now";
-  return new Date(value).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return new Date(value).toLocaleString(resolveLocale(), {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
 function fmtBytes(value) {
@@ -963,6 +983,27 @@ function fmtBytes(value) {
 
 function defaultHtml(title) {
   return `<h1>${esc(title)}</h1><p>Write your contract content here.</p><p>Add terms, pricing, signatures, and clauses on this page.</p>`;
+}
+
+function applyWorkspaceSettings() {
+  const theme = state.settings?.appearanceTheme || "aurora";
+  const backgroundStyle = state.settings?.backgroundStyle || "glow";
+  const locale = resolveLocale();
+  const language = locale.toLowerCase().startsWith("vi") ? "vi" : "en";
+
+  document.documentElement.lang = language;
+  document.body.dataset.theme = theme;
+  document.body.dataset.background = backgroundStyle;
+
+  if (state.richEditor?.getBody()) {
+    state.richEditor.getBody().setAttribute("lang", language);
+  }
+}
+
+function resolveLocale() {
+  const locale = state.settings?.uiLocale || "en-US";
+  if (locale === "en-US-u-em-emoji") return "en-US";
+  return locale;
 }
 
 function getEditorHtml() {
