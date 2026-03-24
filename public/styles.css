@@ -68,6 +68,20 @@ body[data-background="paper"] {
   background-size: auto, 24px 24px, 24px 24px;
 }
 
+body[data-background="dark"] {
+  --bg: #0f1724;
+  --text: #edf3ff;
+  --muted: #aab7cf;
+  --line: rgba(173, 190, 220, 0.18);
+  --panel: #101b2b;
+  --panel-soft: #142033;
+  --panel-tint: rgba(16, 27, 43, 0.82);
+  background-image:
+    radial-gradient(circle at top left, rgba(91, 141, 239, 0.22), transparent 28%),
+    radial-gradient(circle at top right, rgba(127, 86, 217, 0.24), transparent 24%),
+    linear-gradient(180deg, #08111d 0%, #0f1724 45%, #101a29 100%);
+}
+
 button,
 input,
 select,
@@ -86,6 +100,11 @@ textarea {
 .editor-view {
   background:
     linear-gradient(180deg, #eef3f8 0%, #f6f8fb 24%, #eef2f6 100%);
+}
+
+body[data-background="dark"] .editor-view {
+  background:
+    linear-gradient(180deg, rgba(14, 22, 34, 0.94) 0%, rgba(17, 27, 42, 0.96) 100%);
 }
 
 .home-header,
@@ -214,6 +233,12 @@ textarea {
 
 .mini-doc-topbar {
   background: #fff;
+}
+
+body[data-background="dark"] .mini-doc-topbar,
+body[data-background="dark"] .home-header,
+body[data-background="dark"] .docs-topbar {
+  background: rgba(14, 22, 34, 0.92);
 }
 
 .compact-toolbar-wrap {
@@ -451,6 +476,23 @@ textarea {
   padding: 12px;
 }
 
+body[data-background="dark"] .gallery-paper,
+body[data-background="dark"] .page-card,
+body[data-background="dark"] .file-item,
+body[data-background="dark"] .search-input,
+body[data-background="dark"] .docs-title-input,
+body[data-background="dark"] #categoryInput,
+body[data-background="dark"] .settings-form input,
+body[data-background="dark"] .settings-form select,
+body[data-background="dark"] .settings-form textarea,
+body[data-background="dark"] .ghost-btn,
+body[data-background="dark"] .quick-action,
+body[data-background="dark"] .docs-icon-btn {
+  background: rgba(13, 23, 37, 0.86);
+  color: var(--text);
+  border-color: rgba(173, 190, 220, 0.16);
+}
+
 .compact-paper {
   min-height: 140px;
 }
@@ -608,6 +650,10 @@ textarea {
   row-gap: 10px;
 }
 
+body[data-background="dark"] .workspace-action-row {
+  background: linear-gradient(180deg, rgba(14, 22, 34, 0.94) 0%, rgba(17, 27, 42, 0.9) 100%);
+}
+
 .page-nav-group {
   margin-left: auto;
   align-items: center;
@@ -653,6 +699,13 @@ textarea {
     #e8edf3;
 }
 
+body[data-background="dark"] .mini-doc-shell {
+  background:
+    radial-gradient(circle at top left, rgba(127, 86, 217, 0.14), transparent 18%),
+    radial-gradient(circle at top right, rgba(91, 141, 239, 0.16), transparent 20%),
+    #132033;
+}
+
 .paper-frame {
   position: relative;
 }
@@ -696,6 +749,10 @@ textarea.editor {
 .tox.tox-tinymce {
   border: 1px solid #d7dbe0 !important;
   box-shadow: 0 1px 3px rgba(78, 96, 116, 0.18);
+}
+
+body[data-background="dark"] .tox.tox-tinymce {
+  border-color: rgba(173, 190, 220, 0.18) !important;
 }
 
 .mini-doc-shell .tox.tox-tinymce {

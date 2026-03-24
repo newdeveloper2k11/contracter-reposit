@@ -991,6 +991,7 @@ function applyWorkspaceSettings() {
   document.documentElement.lang = language;
   document.body.dataset.theme = theme;
   document.body.dataset.background = backgroundStyle;
+  applyTranslations(language);
 
   if (state.richEditor?.getBody()) {
     state.richEditor.getBody().setAttribute("lang", language);
@@ -1001,6 +1002,103 @@ function resolveLocale() {
   const locale = state.settings?.uiLocale || "en-US";
   if (locale === "en-US-u-em-emoji") return "en-US";
   return locale;
+}
+
+function applyTranslations(language) {
+  const vi = language === "vi";
+
+  document.title = vi ? "Kho Hop Dong" : "Contract Vault";
+  text(el.settingsBtn, vi ? "Cai dat" : "Settings");
+  text(el.settingsBtnEditor, vi ? "Cai dat" : "Settings");
+  text(el.newContractBtn, vi ? "Tai lieu moi" : "Blank document");
+  text(el.createGoogleDocBtn, vi ? "Tao Google Doc" : "Create Google Doc");
+  text(el.aiGoogleDocBtn, vi ? "AI tao Google Doc" : "AI Google Doc");
+  text(el.homeDriveBtn, vi ? "Mo Drive picker" : "Open Drive picker");
+  text(el.homeTemplatesBtn, vi ? "Tao tuong tu" : "Generate similar");
+  text(el.connectDriveBtn, vi ? "Ket noi Drive" : "Connect Drive");
+  text(el.backBtn, vi ? "Quay lai" : "Back");
+  text(el.createGoogleDocEditorBtn, vi ? "Tao Google Doc" : "Create Google Doc");
+  text(el.aiGoogleDocEditorBtn, vi ? "AI tao Google Doc" : "AI to Google Doc");
+  text(el.downloadHtmlBtn, vi ? "Tai xuong" : "Download");
+  text(el.deleteBtn, vi ? "Xoa" : "Delete");
+  text(el.insertTextFileBtn, vi ? "Chen tep" : "Insert file");
+  text(el.duplicateBtn, vi ? "Nhan ban" : "Duplicate doc");
+  text(el.generateBtn, vi ? "Tao tuong tu" : "Generate similar");
+  text(el.prevPageBtn, vi ? "Truoc" : "Prev");
+  text(el.nextPageBtn, vi ? "Sau" : "Next");
+  text(el.addPageBtn, vi ? "Them trang" : "Add page");
+  text(el.removePageBtn, vi ? "Xoa" : "Remove");
+  text(el.settingsCloseBtn, vi ? "Quay lai" : "Back");
+  text(document.querySelector(".home-brand"), vi ? "Kho Hop Dong" : "Contract Vault");
+  text(document.querySelector(".hero-card .eyebrow"), vi ? "TAO MOI" : "Create");
+  text(document.querySelector(".hero-card h1"), vi ? "Tao hop dong nhanh hon" : "Start contracts faster");
+  text(
+    document.querySelector(".hero-card .helper-copy"),
+    vi
+      ? "Mo tep, tao ban nhap moi, hoac nhan ban hop dong da luu ma khong can cai dat lai moi lan."
+      : "Open a file, create a blank draft, or duplicate a saved contract without dealing with setup every time."
+  );
+  text(document.querySelector(".hero-side .eyebrow"), vi ? "DRIVE" : "Drive");
+  text(document.querySelector(".hero-side h2"), vi ? "San sang dam may" : "Cloud ready");
+  text(document.querySelector(".home-card .eyebrow"), vi ? "TAI LIEU" : "Documents");
+  text(document.querySelector(".home-card h2"), vi ? "Tap tin hop dong" : "Your contract files");
+  if (el.searchInput) {
+    el.searchInput.placeholder = vi ? "Tim theo ten hop dong hoac danh muc" : "Search by contract name or category";
+  }
+  text(document.querySelector(".workspace-pill:not(.active)"), vi ? "Khong gian lam viec" : "Workspace");
+  text(document.querySelector(".workspace-pill.active"), vi ? "Tai lieu cua toi" : "My Document");
+  text(
+    document.querySelector(".workspace-banner-copy span"),
+    vi
+      ? "Website cua ban van dieu khien trong khi tai lieu mo trong khong gian lam viec nho hon nay."
+      : "Your website stays in control while the document opens inside this smaller workspace."
+  );
+  text(document.querySelector(".workspace-doc-strip .eyebrow"), vi ? "TAI LIEU" : "Documents");
+  text(document.querySelector(".workspace-doc-strip h2"), vi ? "Chuyen doi tai lieu trong khong gian lam viec" : "Switch documents inside the workspace");
+  text(document.querySelector(".docs-mark"), "Docs");
+  text(document.querySelector(".static-pill"), vi ? "Trinh sua nhung" : "Embedded editor");
+  text(document.querySelector(".mini-field span"), vi ? "Danh muc" : "Category");
+  if (el.categoryInput) {
+    el.categoryInput.placeholder = vi ? "Dich vu" : "Services";
+  }
+  text(document.querySelector(".editor-side-panel .sidebar-card .eyebrow"), vi ? "TRANG" : "Pages");
+  text(document.querySelector(".editor-side-panel .sidebar-card h2"), vi ? "Cac trang tai lieu" : "Document pages");
+  text(document.querySelectorAll(".editor-side-panel .sidebar-card .eyebrow")[1], vi ? "TEP" : "Files");
+  text(document.querySelectorAll(".editor-side-panel .sidebar-card h2")[1], vi ? "Tap dinh kem" : "Attachments");
+  text(document.querySelector(".settings-header .eyebrow"), vi ? "CAI DAT" : "Settings");
+  text(document.querySelector(".settings-header h2"), vi ? "Ngon ngu, mau sac, va giao dien" : "Language, colors, and workspace style");
+  text(document.querySelector(".settings-note-card strong"), vi ? "Da an khoa dam may" : "Cloud keys hidden");
+  text(
+    document.querySelector(".settings-note-card p"),
+    vi
+      ? "Thong tin Google va luu tru duoc giu o phia may chu va khong con hien de chinh sua trong trang nay."
+      : "Google and storage credentials now stay on the server side and are no longer editable in this page."
+  );
+
+  const labels = document.querySelectorAll("#settingsForm label span");
+  if (labels[0]) text(labels[0], vi ? "Giao dien mau" : "Color theme");
+  if (labels[1]) text(labels[1], vi ? "Kieu nen" : "Background style");
+  if (labels[2]) text(labels[2], vi ? "Ngon ngu va khu vuc" : "Language and locale");
+
+  setOption(el.appearanceTheme, 0, vi ? "Xanh cuc quang" : "Aurora blue");
+  setOption(el.appearanceTheme, 1, vi ? "Cam hoang hon" : "Sunset coral");
+  setOption(el.appearanceTheme, 2, vi ? "Xanh rung" : "Forest mint");
+  setOption(el.backgroundStyle, 0, vi ? "Phat mau" : "Color glow");
+  setOption(el.backgroundStyle, 1, vi ? "Luoi mem" : "Soft mesh");
+  setOption(el.backgroundStyle, 2, vi ? "Giay nhe" : "Paper calm");
+  setOption(el.backgroundStyle, 3, vi ? "Nen toi" : "Dark ambient");
+  setOption(el.uiLocale, 0, "English");
+  setOption(el.uiLocale, 1, vi ? "Tieng Viet" : "Vietnamese");
+  setOption(el.uiLocale, 2, vi ? "English + emoji" : "English + emoji");
+  text(document.querySelector("#saveSettingsBtn"), vi ? "Luu cai dat" : "Save settings");
+}
+
+function text(node, value) {
+  if (node) node.textContent = value;
+}
+
+function setOption(select, index, value) {
+  if (select?.options?.[index]) select.options[index].textContent = value;
 }
 
 function getEditorHtml() {
