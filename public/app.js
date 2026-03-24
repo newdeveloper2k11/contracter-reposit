@@ -862,6 +862,9 @@ async function openPicker() {
 async function importDriveFile(doc) {
   updateDriveStatus(`Importing ${doc.name}...`);
   const mimeType = doc.mimeType || "";
+  const importTitle = doc.name.replace(/\.[^.]+$/, "") || "Imported file";
+  const shouldOpenDedicatedImport =
+    state.currentView !== "editor" || !state.activeId || isPdf({ name: doc.name, mimeType });
 
   if (mimeType === "application/vnd.google-apps.document") {
     const response = await fetch(
@@ -892,8 +895,8 @@ async function importDriveFile(doc) {
       return;
     }
     const csvText = await response.text();
-    if (!state.activeId) {
-      await createContract({ title: doc.name, category: "Imported from Drive" });
+    if (shouldOpenDedicatedImport) {
+      await createContract({ title: importTitle, category: "Imported from Drive" });
     }
     insertEditorHtml(`<section><h2>${esc(doc.name)}</h2><pre>${esc(csvText)}</pre></section>`);
     syncCurrentPageFromEditor();
@@ -913,8 +916,8 @@ async function importDriveFile(doc) {
 
   const blob = await downloadResponse.blob();
   const base64Data = await blobToBase64(blob);
-  if (!state.activeId) {
-    await createContract({ title: doc.name.replace(/\.[^.]+$/, "") || "Imported file", category: "Imported from Drive" });
+  if (shouldOpenDedicatedImport) {
+    await createContract({ title: importTitle, category: "Imported from Drive" });
   }
 
   const uploadResponse = await fetch(`/api/contracts/${state.activeId}/files`, {
